@@ -29,12 +29,16 @@ class ApiClient {
 
   /**
    * Get refresh token from cookie
+   * Note: HTTP-only cookies cannot be read from JavaScript, but they are automatically
+   * sent with requests when credentials: "include" is set. This method is kept for
+   * reference but will return null for HTTP-only cookies (which is expected).
    */
   private getRefreshToken(): string | null {
-    if (typeof document === "undefined") return null;
-    const cookies = document.cookie.split(";");
-    const refreshTokenCookie = cookies.find((cookie) => cookie.trim().startsWith("refreshToken="));
-    return refreshTokenCookie ? decodeURIComponent(refreshTokenCookie.split("=")[1]) : null;
+    // HTTP-only cookies cannot be read from JavaScript
+    // The refresh token cookie is HTTP-only and will be sent automatically
+    // with credentials: "include" in the fetch request
+    // We return null here to indicate we rely on automatic cookie sending
+    return null;
   }
 
   /**
@@ -42,8 +46,9 @@ class ApiClient {
    * This is just for reference - actual cookie is set by backend
    */
   private async refreshAccessToken(): Promise<string | null> {
-    const refreshToken = this.getRefreshToken();
-    if (!refreshToken) {
+    // Don't try to refresh if we don't have an access token (already logged out)
+    if (!this.accessToken) {
+      logger.debug("Skipping token refresh - no access token (already logged out)");
       return null;
     }
 
@@ -52,16 +57,44 @@ class ApiClient {
       const base = this.baseURL.endsWith("/") ? this.baseURL.slice(0, -1) : this.baseURL;
       const response = await fetch(`${base}/auth/refresh`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include", // Important for cookies
+        // Don't set Content-Type - refresh token comes from HTTP-only cookie, not body
+        credentials: "include", // Important: sends HTTP-only refresh token cookie automatically
       });
 
       if (!response.ok) {
-        throw new Error("Token refresh failed");
+        const errorText = await response.text().catch(() => "Unknown error");
+        
+        // Store whether we had a token before clearing it
+        const hadToken = !!this.accessToken;
+        
+        // If refresh token is missing (401), we're already logged out - don't log as error
+        if (response.status === 401) {
+          logger.debug("Token refresh failed - refresh token missing (already logged out)", {
+            status: response.status,
+            error: errorText,
+          });
+        } else {
+          logger.error("Token refresh failed", new Error(`Status: ${response.status}, ${errorText}`));
+        }
+        
+        // If refresh fails, clear the stored token
+        this.setAccessToken(null);
+        // Only emit logout if we had a token (to avoid duplicate logout events)
+        if (hadToken) {
+          eventBus.emit(EVENTS.AUTH_LOGOUT);
+        }
+        return null;
       }
 
+      // Try to get token from response header first (preferred)
+      const accessTokenFromHeader = response.headers.get("x-access-token");
+      if (accessTokenFromHeader) {
+        this.setAccessToken(accessTokenFromHeader);
+        eventBus.emit(EVENTS.AUTH_TOKEN_REFRESHED, { accessToken: accessTokenFromHeader });
+        return accessTokenFromHeader;
+      }
+
+      // Fallback to response body
       const data: ApiResponse<{ accessToken: string; refreshToken: string }> =
         await response.json();
 
@@ -71,9 +104,29 @@ class ApiClient {
         return data.data.accessToken;
       }
 
+      logger.warn("Token refresh response missing access token");
       return null;
     } catch (error) {
-      logger.error("Failed to refresh access token", error as Error);
+      // Check if error is about missing refresh token (401) - this is expected after logout
+      const isMissingTokenError = error instanceof Error && 
+        (error.message.includes('401') || error.message.includes('Refresh token is required'));
+      
+      if (isMissingTokenError) {
+        logger.debug("Token refresh failed - refresh token missing (already logged out)", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      } else {
+        logger.error("Failed to refresh access token", error as Error);
+      }
+      
+      // Store whether we had a token before clearing it
+      const hadToken = !!this.accessToken;
+      // Clear token on error
+      this.setAccessToken(null);
+      // Only emit logout if we had a token (to avoid duplicate logout events)
+      if (hadToken) {
+        eventBus.emit(EVENTS.AUTH_LOGOUT);
+      }
       return null;
     }
   }
@@ -82,12 +135,19 @@ class ApiClient {
    * Make HTTP request with retry logic
    */
   private async request<T>(endpoint: string, config: RequestConfig = {}): Promise<ApiResponse<T>> {
+    // Auth endpoints (login, logout, refresh) should NOT retry on failure
+    const isAuthEndpoint = endpoint.includes('/auth/login') || 
+                          endpoint.includes('/auth/logout') || 
+                          endpoint.includes('/auth/refresh');
+    
     const {
       timeout = this.timeout,
-      retry = {
-        attempts: API_CONFIG.retryAttempts,
-        delay: API_CONFIG.retryDelay,
-      },
+      retry = isAuthEndpoint 
+        ? { attempts: 0, delay: 0 } // No retries for auth endpoints
+        : {
+            attempts: API_CONFIG.retryAttempts,
+            delay: API_CONFIG.retryDelay,
+          },
       ...fetchConfig
     } = config;
 
@@ -107,15 +167,25 @@ class ApiClient {
     if (this.accessToken) {
       headers.set("Authorization", `Bearer ${this.accessToken}`);
     }
-    headers.set("Content-Type", "application/json");
+    // Only set Content-Type if there's a body
+    if (fetchConfig.body) {
+      headers.set("Content-Type", "application/json");
+    }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    let controller = new AbortController();
+    let timeoutId = setTimeout(() => controller.abort(), timeout);
 
     let lastError: Error | null = null;
+    let tokenRefreshed = false;
 
     for (let attempt = 0; attempt <= retry.attempts; attempt++) {
       try {
+        // If token was refreshed, create new AbortController for retry
+        if (tokenRefreshed && attempt > 0) {
+          controller = new AbortController();
+          timeoutId = setTimeout(() => controller.abort(), timeout);
+        }
+
         const startTime = Date.now();
         const response = await fetch(url, {
           ...fetchConfig,
@@ -134,15 +204,37 @@ class ApiClient {
           });
         }
 
-        // Handle 401 Unauthorized - try to refresh token
-        if (response.status === 401 && attempt === 0) {
+        // Handle 401 Unauthorized - try to refresh token (only on first attempt)
+        // Only try to refresh if we have an access token (not already logged out)
+        if (response.status === 401 && attempt === 0 && !tokenRefreshed && this.accessToken) {
+          logger.info("Access token expired, attempting refresh", { endpoint });
           const newToken = await this.refreshAccessToken();
           if (newToken) {
             headers.set("Authorization", `Bearer ${newToken}`);
+            tokenRefreshed = true;
+            // Small delay before retry to ensure token is set
+            await new Promise((resolve) => setTimeout(resolve, 50));
             continue; // Retry with new token
+          } else {
+            // Refresh failed - check if we're already logged out
+            if (!this.accessToken) {
+              // Already logged out - don't emit logout event again
+              logger.debug("Token refresh failed - already logged out");
+            } else {
+              // Refresh failed but we still have a token - logout user
+              logger.warn("Token refresh failed, logging out user");
+              eventBus.emit(EVENTS.AUTH_LOGOUT);
+            }
+            const error: ApiError = {
+              message: "Session expired. Please login again.",
+              statusCode: 401,
+              error: "Unauthorized",
+            };
+            throw error;
           }
         }
 
+        // Only parse JSON if response is ok or we're not retrying
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
@@ -153,8 +245,14 @@ class ApiClient {
             details: data,
           };
 
-          // Don't retry on client errors (4xx) except 401
+          // Don't retry on client errors (4xx) except 401 (which is handled above)
+          // Auth endpoints should never retry
           if (response.status >= 400 && response.status < 500 && response.status !== 401) {
+            throw error;
+          }
+
+          // Don't retry auth endpoints - they should never retry
+          if (isAuthEndpoint) {
             throw error;
           }
 
@@ -176,8 +274,8 @@ class ApiClient {
           throw new Error("Request timeout");
         }
 
-        // Network error - retry
-        if (attempt < retry.attempts && !(error instanceof Error && "statusCode" in error)) {
+        // Network error - retry (but not for auth endpoints)
+        if (attempt < retry.attempts && !(error instanceof Error && "statusCode" in error) && !isAuthEndpoint) {
           await new Promise((resolve) => setTimeout(resolve, retry.delay * (attempt + 1)));
           lastError = error as Error;
           continue;

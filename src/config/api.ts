@@ -38,6 +38,32 @@ export const API_ENDPOINTS = {
       update: (id: string) => `/admin/modules/${id}`,
       delete: (id: string) => `/admin/modules/${id}`,
     },
+    submodules: {
+      list: "/admin/submodules",
+      get: (id: string) => `/admin/submodules/${id}`,
+      create: "/admin/submodules",
+      update: (id: string) => `/admin/submodules/${id}`,
+      delete: (id: string) => `/admin/submodules/${id}`,
+    },
+    features: {
+      list: "/admin/features",
+      get: (id: string) => `/admin/features/${id}`,
+      create: "/admin/features",
+      update: (id: string) => `/admin/features/${id}`,
+      delete: (id: string) => `/admin/features/${id}`,
+      operations: {
+        list: (id: string) => `/admin/features/${id}/operations`,
+        add: (id: string) => `/admin/features/${id}/operations`,
+        remove: (id: string, operationId: string) => `/admin/features/${id}/operations/${operationId}`,
+      },
+    },
+    operations: {
+      list: "/admin/operations",
+      get: (id: string) => `/admin/operations/${id}`,
+      create: "/admin/operations",
+      update: (id: string) => `/admin/operations/${id}`,
+      delete: (id: string) => `/admin/operations/${id}`,
+    },
     views: {
       list: "/admin/views",
       get: (id: string) => `/admin/views/${id}`,
@@ -58,6 +84,22 @@ export const API_ENDPOINTS = {
         list: (id: string) => `/admin/roles/${id}/module-access`,
         grant: (id: string) => `/admin/roles/${id}/module-access`,
         revoke: (id: string, moduleId: string) => `/admin/roles/${id}/module-access/${moduleId}`,
+      },
+      submoduleAccess: {
+        list: (id: string) => `/admin/roles/${id}/submodule-access`,
+        grant: (id: string) => `/admin/roles/${id}/submodule-access`,
+        revoke: (id: string, submoduleId: string) => `/admin/roles/${id}/submodule-access/${submoduleId}`,
+      },
+      featureAccess: {
+        list: (id: string) => `/admin/roles/${id}/feature-access`,
+        grant: (id: string) => `/admin/roles/${id}/feature-access`,
+        revoke: (id: string, featureId: string) => `/admin/roles/${id}/feature-access/${featureId}`,
+      },
+      featureOperationAccess: {
+        list: (id: string) => `/admin/roles/${id}/feature-operation-access`,
+        grant: (id: string) => `/admin/roles/${id}/feature-operation-access`,
+        revoke: (id: string, featureId: string, operationId: string) =>
+          `/admin/roles/${id}/feature-operation-access/${featureId}/${operationId}`,
       },
       viewAccess: {
         list: (id: string) => `/admin/roles/${id}/view-access`,

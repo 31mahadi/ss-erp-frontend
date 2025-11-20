@@ -31,33 +31,40 @@ const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) => {
     };
   }, [open]);
 
-  if (!open) return null;
+  const childrenArray = React.Children.toArray(children);
+  const triggerChildren = childrenArray.filter(
+    (child) => !React.isValidElement(child) || (child.type as any)?.displayName !== "DialogContent"
+  );
+  const contentChildren = childrenArray.filter(
+    (child) => React.isValidElement(child) && (child.type as any)?.displayName === "DialogContent"
+  );
 
   return (
     <DialogContext.Provider value={{ open, onOpenChange }}>
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div
-          className="fixed inset-0 bg-black/50"
-          onClick={() => onOpenChange(false)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              onOpenChange(false);
-            }
-          }}
-          role="button"
-          tabIndex={0}
-          aria-label="Close dialog"
-        />
-        {children}
-      </div>
+      {triggerChildren}
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => onOpenChange(false)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                onOpenChange(false);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label="Close dialog"
+          />
+          {contentChildren}
+        </div>
+      )}
     </DialogContext.Provider>
   );
 };
 
 const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
   ({ className, children, ...props }, ref) => {
-    const { onOpenChange } = React.useContext(DialogContext);
-
     return (
       <div
         ref={ref}
@@ -107,4 +114,38 @@ const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
 );
 DialogFooter.displayName = "DialogFooter";
 
-export { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription };
+interface DialogTriggerProps extends React.HTMLAttributes<HTMLElement> {
+  asChild?: boolean;
+}
+
+const DialogTrigger = React.forwardRef<HTMLElement, DialogTriggerProps>(
+  ({ asChild, children, ...props }, ref) => {
+    const { onOpenChange } = React.useContext(DialogContext);
+
+    const handleClick = () => {
+      onOpenChange(true);
+    };
+
+    if (asChild && React.isValidElement(children)) {
+      return React.cloneElement(children as React.ReactElement, {
+        ref,
+        onClick: (e: React.MouseEvent<HTMLElement>) => {
+          handleClick();
+          if (children.props.onClick) {
+            children.props.onClick(e);
+          }
+        },
+        ...props,
+      });
+    }
+
+    return (
+      <button ref={ref as React.Ref<HTMLButtonElement>} onClick={handleClick} {...props}>
+        {children}
+      </button>
+    );
+  }
+);
+DialogTrigger.displayName = "DialogTrigger";
+
+export { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription, DialogTrigger };

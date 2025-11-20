@@ -1,5 +1,6 @@
 import { API_ENDPOINTS } from "@/config/api";
 import { apiClient } from "@/lib/api/api-client";
+import { useAccessStore } from "@/lib/access/access-store";
 import { EVENTS, eventBus } from "@/lib/event-bus/event-bus";
 import { logger } from "@/lib/logger/logger";
 import { create } from "zustand";
@@ -30,6 +31,28 @@ export const useAuthStore = create<AuthStore>()(
             // Ignore parse errors
           }
         }
+
+        // Listen for token refresh events to keep auth state in sync
+        eventBus.on(EVENTS.AUTH_TOKEN_REFRESHED, async (data: { accessToken: string }) => {
+          // Token is automatically set in API client
+          logger.info("Access token refreshed successfully");
+          // Refresh user data to get updated permissions
+          // This ensures access store is updated when permissions change
+          try {
+            await get().refreshUser();
+          } catch (error) {
+            logger.warn("Failed to refresh user data after token refresh", error as Error);
+            // Don't throw - token refresh succeeded, just user data refresh failed
+          }
+        });
+
+        // Listen for logout events to clear state (but don't call logout API again)
+        eventBus.on(EVENTS.AUTH_LOGOUT, () => {
+          // Just clear local state, don't call logout API (which would cause infinite loop)
+          apiClient.setAccessToken(null);
+          set({ user: null, isAuthenticated: false });
+          useAccessStore.getState().setAccess(null);
+        });
       }
 
       return {
@@ -39,6 +62,12 @@ export const useAuthStore = create<AuthStore>()(
 
         setUser: (user: User | null) => {
           set({ user, isAuthenticated: !!user });
+          // Sync access info to access store
+          if (user?.access) {
+            useAccessStore.getState().setAccess(user.access);
+          } else {
+            useAccessStore.getState().setAccess(null);
+          }
           if (user) {
             eventBus.emit(EVENTS.AUTH_LOGIN, user);
           }
@@ -78,6 +107,13 @@ export const useAuthStore = create<AuthStore>()(
         },
 
         logout: async () => {
+          // Prevent multiple simultaneous logout calls
+          const currentState = get();
+          if (!currentState.isAuthenticated && !currentState.user) {
+            // Already logged out, skip
+            return;
+          }
+
           try {
             await apiClient.post(API_ENDPOINTS.auth.logout);
           } catch (error) {
@@ -85,7 +121,11 @@ export const useAuthStore = create<AuthStore>()(
           } finally {
             apiClient.setAccessToken(null);
             set({ user: null, isAuthenticated: false });
-            eventBus.emit(EVENTS.AUTH_LOGOUT);
+            useAccessStore.getState().setAccess(null);
+            // Only emit logout event if we were actually logged in
+            if (currentState.isAuthenticated || currentState.user) {
+              eventBus.emit(EVENTS.AUTH_LOGOUT);
+            }
             logger.info("User logged out");
           }
         },

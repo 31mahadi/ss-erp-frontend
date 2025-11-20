@@ -84,16 +84,18 @@ cp .env.local.example .env.local
 Edit `.env.local` and set your API URL:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_API_URL=http://localhost:3131/api
 ```
 
 4. **Run the development server:**
 
 ```bash
 pnpm dev
+# or
+pnpm start:dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3132](http://localhost:3132) in your browser.
 
 ### Build for Production
 

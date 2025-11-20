@@ -4,7 +4,7 @@
  * Converts 0.0.0.0 to localhost for browser compatibility
  */
 export function getApiUrl(): string {
-  const defaultUrl = "http://localhost:3000/api";
+  const defaultUrl = "http://localhost:3131/api";
 
   if (typeof window === "undefined") {
     // Server-side: use environment variable directly
@@ -17,7 +17,7 @@ export function getApiUrl(): string {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
   if (!apiUrl) {
-    console.warn("NEXT_PUBLIC_API_URL is not set. Using default: http://localhost:3000/api");
+    console.warn("NEXT_PUBLIC_API_URL is not set. Using default: http://localhost:3131/api");
     return defaultUrl;
   }
 

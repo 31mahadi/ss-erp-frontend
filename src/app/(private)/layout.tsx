@@ -37,9 +37,9 @@ export default function PrivateLayout({
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col transition-all duration-300 ml-72">
         <Topbar />
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>
     </div>
   );

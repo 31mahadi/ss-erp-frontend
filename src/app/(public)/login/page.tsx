@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { t } from "@/lib/i18n/i18n";
 import { useLogin } from "@/modules/auth/hooks/use-auth";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useForm } from "react-hook-form";
@@ -23,6 +24,7 @@ export default function LoginPage() {
   const router = useRouter();
   const loginMutation = useLogin();
   const [error, setError] = React.useState<string | null>(null);
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const {
     register,
@@ -30,6 +32,10 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "01.mahadi@gmail.com",
+      password: "SuperAdmin@123",
+    },
   });
 
   const onSubmit = async (data: LoginFormData) => {
@@ -64,12 +70,28 @@ export default function LoginPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">{t("auth.password")}</Label>
-              <Input
-                id="password"
-                type="password"
-                {...register("password")}
-                disabled={loginMutation.isPending}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  {...register("password")}
+                  disabled={loginMutation.isPending}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none disabled:opacity-50"
+                  disabled={loginMutation.isPending}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
               {errors.password && (
                 <p className="text-sm text-destructive">{errors.password.message}</p>
               )}
