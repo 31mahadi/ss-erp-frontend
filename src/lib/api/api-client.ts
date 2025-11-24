@@ -7,10 +7,14 @@ class ApiClient {
   private baseURL: string;
   private timeout: number;
   private accessToken: string | null = null;
+  private tokenExpiryTime: number | null = null;
+  private refreshPromise: Promise<string | null> | null = null;
+  private refreshTimer: NodeJS.Timeout | null = null;
 
   constructor() {
     this.baseURL = API_CONFIG.baseURL;
     this.timeout = API_CONFIG.timeout;
+    this.startProactiveRefresh();
   }
 
   /**
@@ -18,6 +22,108 @@ class ApiClient {
    */
   setAccessToken(token: string | null): void {
     this.accessToken = token;
+    if (token) {
+      // Decode JWT to get expiration time (without verification, just for timing)
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp) {
+          // Set expiry time (in milliseconds)
+          this.tokenExpiryTime = payload.exp * 1000;
+          // Schedule proactive refresh 1 minute before expiration
+          this.scheduleProactiveRefresh();
+        }
+      } catch (error) {
+        // If we can't decode the token, don't schedule refresh
+        logger.warn("Could not decode token for expiry time", error as Error);
+      }
+    } else {
+      this.tokenExpiryTime = null;
+      this.cancelProactiveRefresh();
+    }
+  }
+
+  /**
+   * Schedule proactive token refresh before expiration
+   */
+  private scheduleProactiveRefresh(): void {
+    this.cancelProactiveRefresh();
+    
+    if (!this.tokenExpiryTime || !this.accessToken) {
+      return;
+    }
+
+    const now = Date.now();
+    const timeUntilExpiry = this.tokenExpiryTime - now;
+    // Refresh 1 minute before expiration (or 5 minutes if token expires in less than 1 minute)
+    const refreshTime = Math.max(60000, Math.min(timeUntilExpiry - 60000, 5 * 60000));
+
+    if (refreshTime > 0) {
+      this.refreshTimer = setTimeout(() => {
+        logger.info("Proactively refreshing token before expiration");
+        this.refreshAccessToken().catch((error) => {
+          // Only log network errors as debug, not as warnings
+          const isNetworkError = error instanceof TypeError && 
+            (error.message.includes('Failed to fetch') || 
+             error.message.includes('NetworkError') ||
+             error.message.includes('Network request failed') ||
+             error.message.includes('Load failed'));
+          
+          if (isNetworkError) {
+            logger.debug("Proactive token refresh failed - network error (may be temporary)", error as Error);
+          } else {
+            logger.warn("Proactive token refresh failed", error as Error);
+          }
+        });
+      }, refreshTime);
+    }
+  }
+
+  /**
+   * Cancel scheduled proactive refresh
+   */
+  private cancelProactiveRefresh(): void {
+    if (this.refreshTimer) {
+      clearTimeout(this.refreshTimer);
+      this.refreshTimer = null;
+    }
+  }
+
+  /**
+   * Start proactive refresh mechanism
+   */
+  private startProactiveRefresh(): void {
+    // Check token expiry every 30 seconds
+    setInterval(() => {
+      if (this.tokenExpiryTime && this.accessToken) {
+        const now = Date.now();
+        const timeUntilExpiry = this.tokenExpiryTime - now;
+        
+        // If token expires in less than 5 minutes, refresh it proactively
+        // This gives us a buffer to handle network delays and multiple refreshes
+        if (timeUntilExpiry > 0 && timeUntilExpiry < 5 * 60000) {
+          // Only refresh if we're not already refreshing
+          if (!this.refreshPromise) {
+            logger.info("Token expiring soon, refreshing proactively", {
+              timeUntilExpiry: `${Math.round(timeUntilExpiry / 1000)}s`,
+            });
+            this.refreshAccessToken().catch((error) => {
+              // Only log network errors as debug, not as warnings
+              const isNetworkError = error instanceof TypeError && 
+                (error.message.includes('Failed to fetch') || 
+                 error.message.includes('NetworkError') ||
+                 error.message.includes('Network request failed') ||
+                 error.message.includes('Load failed'));
+              
+              if (isNetworkError) {
+                logger.debug("Proactive token refresh failed - network error (may be temporary)", error as Error);
+              } else {
+                logger.warn("Proactive token refresh failed", error as Error);
+              }
+            });
+          }
+        }
+      }
+    }, 30000); // Check every 30 seconds
   }
 
   /**
@@ -45,90 +151,132 @@ class ApiClient {
    * Set refresh token in HTTP-only cookie (handled by backend)
    * This is just for reference - actual cookie is set by backend
    */
-  private async refreshAccessToken(): Promise<string | null> {
+  async refreshAccessToken(): Promise<string | null> {
     // Don't try to refresh if we don't have an access token (already logged out)
     if (!this.accessToken) {
       logger.debug("Skipping token refresh - no access token (already logged out)");
       return null;
     }
 
-    try {
-      // Construct refresh endpoint URL properly
-      const base = this.baseURL.endsWith("/") ? this.baseURL.slice(0, -1) : this.baseURL;
-      const response = await fetch(`${base}/auth/refresh`, {
-        method: "POST",
-        // Don't set Content-Type - refresh token comes from HTTP-only cookie, not body
-        credentials: "include", // Important: sends HTTP-only refresh token cookie automatically
-      });
+    // If a refresh is already in progress, wait for it instead of starting a new one
+    if (this.refreshPromise) {
+      logger.debug("Token refresh already in progress, waiting...");
+      return this.refreshPromise;
+    }
 
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => "Unknown error");
+    // Create a new refresh promise
+    this.refreshPromise = (async () => {
+      try {
+        // Construct refresh endpoint URL properly
+        const base = this.baseURL.endsWith("/") ? this.baseURL.slice(0, -1) : this.baseURL;
+        const response = await fetch(`${base}/auth/refresh`, {
+          method: "POST",
+          // Don't set Content-Type - refresh token comes from HTTP-only cookie, not body
+          credentials: "include", // Important: sends HTTP-only refresh token cookie automatically
+          headers: {
+            // Don't send Authorization header for refresh endpoint
+          },
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => "Unknown error");
+          
+          // Store whether we had a token before clearing it
+          const hadToken = !!this.accessToken;
+          
+          // If refresh token is missing (401), we're already logged out - don't log as error
+          if (response.status === 401) {
+            logger.warn("Token refresh failed - refresh token missing or expired", {
+              status: response.status,
+              error: errorText,
+              hadToken,
+            });
+          } else {
+            logger.error("Token refresh failed", new Error(`Status: ${response.status}, ${errorText}`), {
+              status: response.status,
+              error: errorText,
+              hadToken,
+            });
+          }
+          
+          // If refresh fails, clear the stored token
+          this.setAccessToken(null);
+          // Only emit logout if we had a token (to avoid duplicate logout events)
+          if (hadToken) {
+            eventBus.emit(EVENTS.AUTH_LOGOUT);
+          }
+          return null;
+        }
+
+        // Try to get token from response header first (preferred)
+        const accessTokenFromHeader = response.headers.get("x-access-token");
+        if (accessTokenFromHeader) {
+          logger.info("Token refreshed successfully from header");
+          this.setAccessToken(accessTokenFromHeader);
+          eventBus.emit(EVENTS.AUTH_TOKEN_REFRESHED, { accessToken: accessTokenFromHeader });
+          return accessTokenFromHeader;
+        }
+
+        // Fallback to response body
+        const data: ApiResponse<{ accessToken: string; refreshToken: string }> =
+          await response.json();
+
+        if (data.data?.accessToken) {
+          logger.info("Token refreshed successfully from body");
+          this.setAccessToken(data.data.accessToken);
+          eventBus.emit(EVENTS.AUTH_TOKEN_REFRESHED, data.data);
+          return data.data.accessToken;
+        }
+
+        logger.warn("Token refresh response missing access token", { responseData: data });
+        return null;
+      } catch (error) {
+        // Check if error is about missing refresh token (401) - this is expected after logout
+        const isMissingTokenError = error instanceof Error && 
+          (error.message.includes('401') || error.message.includes('Refresh token is required'));
         
-        // Store whether we had a token before clearing it
-        const hadToken = !!this.accessToken;
+        // Check if it's a network error (Failed to fetch, CORS, etc.)
+        const isNetworkError = error instanceof TypeError && 
+          (error.message.includes('Failed to fetch') || 
+           error.message.includes('NetworkError') ||
+           error.message.includes('Network request failed') ||
+           error.message.includes('Load failed'));
         
-        // If refresh token is missing (401), we're already logged out - don't log as error
-        if (response.status === 401) {
+        if (isMissingTokenError) {
           logger.debug("Token refresh failed - refresh token missing (already logged out)", {
-            status: response.status,
-            error: errorText,
+            error: error instanceof Error ? error.message : String(error),
           });
+        } else if (isNetworkError) {
+          // Network errors are usually temporary - don't log as error, just debug
+          // Don't logout user on network errors as they might be temporary
+          logger.debug("Token refresh failed - network error (may be temporary)", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+          // Don't clear token or logout on network errors - let the user retry
+          return null;
         } else {
-          logger.error("Token refresh failed", new Error(`Status: ${response.status}, ${errorText}`));
+          logger.error("Failed to refresh access token", error as Error);
         }
         
-        // If refresh fails, clear the stored token
-        this.setAccessToken(null);
-        // Only emit logout if we had a token (to avoid duplicate logout events)
-        if (hadToken) {
-          eventBus.emit(EVENTS.AUTH_LOGOUT);
+        // Only clear token and logout if it's not a network error
+        if (!isNetworkError) {
+          // Store whether we had a token before clearing it
+          const hadToken = !!this.accessToken;
+          // Clear token on error
+          this.setAccessToken(null);
+          // Only emit logout if we had a token (to avoid duplicate logout events)
+          if (hadToken) {
+            eventBus.emit(EVENTS.AUTH_LOGOUT);
+          }
         }
         return null;
+      } finally {
+        // Clear the refresh promise so new refreshes can be initiated
+        this.refreshPromise = null;
       }
+    })();
 
-      // Try to get token from response header first (preferred)
-      const accessTokenFromHeader = response.headers.get("x-access-token");
-      if (accessTokenFromHeader) {
-        this.setAccessToken(accessTokenFromHeader);
-        eventBus.emit(EVENTS.AUTH_TOKEN_REFRESHED, { accessToken: accessTokenFromHeader });
-        return accessTokenFromHeader;
-      }
-
-      // Fallback to response body
-      const data: ApiResponse<{ accessToken: string; refreshToken: string }> =
-        await response.json();
-
-      if (data.data?.accessToken) {
-        this.setAccessToken(data.data.accessToken);
-        eventBus.emit(EVENTS.AUTH_TOKEN_REFRESHED, data.data);
-        return data.data.accessToken;
-      }
-
-      logger.warn("Token refresh response missing access token");
-      return null;
-    } catch (error) {
-      // Check if error is about missing refresh token (401) - this is expected after logout
-      const isMissingTokenError = error instanceof Error && 
-        (error.message.includes('401') || error.message.includes('Refresh token is required'));
-      
-      if (isMissingTokenError) {
-        logger.debug("Token refresh failed - refresh token missing (already logged out)", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      } else {
-        logger.error("Failed to refresh access token", error as Error);
-      }
-      
-      // Store whether we had a token before clearing it
-      const hadToken = !!this.accessToken;
-      // Clear token on error
-      this.setAccessToken(null);
-      // Only emit logout if we had a token (to avoid duplicate logout events)
-      if (hadToken) {
-        eventBus.emit(EVENTS.AUTH_LOGOUT);
-      }
-      return null;
-    }
+    return this.refreshPromise;
   }
 
   /**
@@ -207,13 +355,18 @@ class ApiClient {
         // Handle 401 Unauthorized - try to refresh token (only on first attempt)
         // Only try to refresh if we have an access token (not already logged out)
         if (response.status === 401 && attempt === 0 && !tokenRefreshed && this.accessToken) {
-          logger.info("Access token expired, attempting refresh", { endpoint });
+          logger.info("Access token expired, attempting refresh", { endpoint, hasToken: !!this.accessToken });
+          
+          // Wait for any ongoing refresh to complete
           const newToken = await this.refreshAccessToken();
+          
           if (newToken) {
+            // Token is already set by refreshAccessToken, just update headers
             headers.set("Authorization", `Bearer ${newToken}`);
             tokenRefreshed = true;
-            // Small delay before retry to ensure token is set
-            await new Promise((resolve) => setTimeout(resolve, 50));
+            logger.debug("Token refreshed successfully, retrying request", { endpoint, hasNewToken: !!newToken });
+            // Small delay before retry to ensure token is set and any other concurrent requests can use the new token
+            await new Promise((resolve) => setTimeout(resolve, 100));
             continue; // Retry with new token
           } else {
             // Refresh failed - check if we're already logged out

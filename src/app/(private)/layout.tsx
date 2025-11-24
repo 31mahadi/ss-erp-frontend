@@ -15,8 +15,13 @@ export default function PrivateLayout({
   const { isAuthenticated, isLoading } = useAuthStore();
 
   React.useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/login");
+    // Only redirect if we're sure the user is not authenticated
+    // Don't redirect during initial load or if we're already on login page
+    if (!isLoading && !isAuthenticated && typeof window !== "undefined") {
+      const currentPath = window.location.pathname;
+      if (currentPath !== "/login") {
+        router.push("/login");
+      }
     }
   }, [isAuthenticated, isLoading, router]);
 

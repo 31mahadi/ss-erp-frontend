@@ -31,23 +31,29 @@ interface NavItem {
 
 export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname();
-  const accessStore = useAccessStore();
+  // Subscribe directly to the access property to ensure reactivity
+  const access = useAccessStore((state) => state.access);
   const { user } = useAuthStore();
   const [isOpen, setIsOpen] = React.useState(true);
   const [expandedItems, setExpandedItems] = React.useState<Set<string>>(
     new Set()
   );
 
-  const modules = accessStore.getAccessibleModules();
-  const access = accessStore.access;
-  
-  // Debug: Log access info
-  React.useEffect(() => {
-    console.log("Sidebar - Access info:", access);
-    console.log("Sidebar - Modules:", modules);
-    console.log("Sidebar - User:", user);
-    console.log("Sidebar - User access:", user?.access);
-  }, [access, modules, user]);
+  // Get modules from access - this will trigger re-render when access changes
+  const modules = React.useMemo(() => {
+    const mods = access?.modules ?? [];
+    // Debug: Log to see what we're getting
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Sidebar modules:', mods);
+      mods.forEach((mod) => {
+        console.log(`Module ${mod.name}:`, {
+          submodules: mod.submodules?.length || 0,
+          features: mod.submodules?.reduce((sum, sm) => sum + (sm.features?.length || 0), 0) || 0,
+        });
+      });
+    }
+    return mods;
+  }, [access]);
 
   const toggleExpanded = (id: string) => {
     setExpandedItems((prev) => {
@@ -73,9 +79,14 @@ export function Sidebar({ className }: SidebarProps) {
       type: "feature",
     });
 
-    // Always show System Management for Super Admin/Admin if they have all access
+    // Always show System Management for Root Admin, Super Admin, or Admin if they have all access
     const hasAllAccess = access?.hasAllAccess || user?.access?.hasAllAccess;
-    if (hasAllAccess) {
+    const isRootAdmin = user?.roles?.includes('Root Admin') || false;
+    const isSuperAdmin = user?.roles?.includes('Super Admin') || false;
+    const isAdmin = user?.roles?.includes('Admin') || false;
+    const hasAdminAccess = hasAllAccess || isRootAdmin || isSuperAdmin || isAdmin;
+    
+    if (hasAdminAccess) {
       items.push({
         id: "system-management",
         label: "System Management",
@@ -105,18 +116,30 @@ export function Sidebar({ className }: SidebarProps) {
             children: [],
           };
 
-          for (const feature of submodule.features) {
-            if (feature.route) {
-              submoduleItem.children?.push({
-                id: feature.id,
-                label: feature.name,
-                href: feature.route,
-                icon: feature.icon,
-                type: "feature",
-              });
-            }
+          // Ensure features array exists and iterate through all features
+          const features = submodule.features || [];
+          if (process.env.NODE_ENV === 'development' && features.length === 0 && submodule.id) {
+            console.warn(`Submodule ${submodule.name} (${submodule.id}) has no features`);
+          }
+          for (const feature of features) {
+            // Show all features, even if they don't have a route
+            // Features without routes can still be accessed via their ID or slug
+            submoduleItem.children?.push({
+              id: feature.id,
+              label: feature.name,
+              href: feature.route || `#${feature.slug || feature.id}`,
+              icon: feature.icon,
+              type: "feature",
+            });
+          }
+          
+          // Debug: Log features for this submodule
+          if (process.env.NODE_ENV === 'development' && features.length > 0) {
+            console.log(`Submodule ${submodule.name} features:`, features.map(f => f.name));
           }
 
+          // Add submodule if it has features OR if it exists (even without features)
+          // This ensures submodules are visible even if they don't have features yet
           if (submoduleItem.children && submoduleItem.children.length > 0) {
             moduleItem.children?.push(submoduleItem);
           }
@@ -143,7 +166,7 @@ export function Sidebar({ className }: SidebarProps) {
     }
 
     return items;
-  }, [modules]);
+  }, [modules, access, user]);
 
   // Auto-expand items that contain the active route
   React.useEffect(() => {

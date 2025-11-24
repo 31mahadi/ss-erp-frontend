@@ -20,15 +20,22 @@ export const useAuthStore = create<AuthStore>()(
     (set, get) => {
       // Initialize API client with persisted token if available
       if (typeof window !== "undefined") {
-        const persistedState = localStorage.getItem("auth-storage");
-        if (persistedState) {
+        // Try to restore access token from a separate storage (since we don't persist it in zustand)
+        // This is a fallback - the refresh token cookie should handle most cases
+        const tokenStorage = localStorage.getItem("auth-token");
+        if (tokenStorage) {
           try {
-            const parsed = JSON.parse(persistedState);
-            if (parsed.state?.user) {
-              // Token will be refreshed on app init
+            const { accessToken, expiresAt } = JSON.parse(tokenStorage);
+            // Only restore if token hasn't expired (with 5 minute buffer)
+            if (accessToken && expiresAt && Date.now() < expiresAt - 5 * 60000) {
+              apiClient.setAccessToken(accessToken);
+            } else {
+              // Token expired, clear it
+              localStorage.removeItem("auth-token");
             }
           } catch {
             // Ignore parse errors
+            localStorage.removeItem("auth-token");
           }
         }
 
@@ -38,18 +45,22 @@ export const useAuthStore = create<AuthStore>()(
           logger.info("Access token refreshed successfully");
           // Refresh user data to get updated permissions
           // This ensures access store is updated when permissions change
-          try {
-            await get().refreshUser();
-          } catch (error) {
-            logger.warn("Failed to refresh user data after token refresh", error as Error);
-            // Don't throw - token refresh succeeded, just user data refresh failed
-          }
+          // Use setTimeout to avoid race conditions with the current request
+          setTimeout(async () => {
+            try {
+              await get().refreshUser();
+            } catch (error) {
+              logger.warn("Failed to refresh user data after token refresh", error as Error);
+              // Don't throw - token refresh succeeded, just user data refresh failed
+            }
+          }, 100);
         });
 
         // Listen for logout events to clear state (but don't call logout API again)
         eventBus.on(EVENTS.AUTH_LOGOUT, () => {
           // Just clear local state, don't call logout API (which would cause infinite loop)
           apiClient.setAccessToken(null);
+          localStorage.removeItem("auth-token");
           set({ user: null, isAuthenticated: false });
           useAccessStore.getState().setAccess(null);
         });
@@ -75,6 +86,21 @@ export const useAuthStore = create<AuthStore>()(
 
         setTokens: (tokens: AuthTokens) => {
           apiClient.setAccessToken(tokens.accessToken);
+          // Store access token temporarily for page refresh recovery
+          // Decode JWT to get expiration time
+          try {
+            if (tokens.accessToken) {
+              const payload = JSON.parse(atob(tokens.accessToken.split('.')[1]));
+              const expiresAt = payload.exp ? payload.exp * 1000 : Date.now() + 15 * 60000; // Default 15 min if no exp
+              localStorage.setItem("auth-token", JSON.stringify({
+                accessToken: tokens.accessToken,
+                expiresAt,
+              }));
+            }
+          } catch (error) {
+            // If we can't decode, don't store it
+            logger.warn("Could not decode token for storage", error as Error);
+          }
           // Refresh token is stored in HTTP-only cookie by backend
         },
 
@@ -139,8 +165,14 @@ export const useAuthStore = create<AuthStore>()(
             }
           } catch (error) {
             logger.error("Failed to refresh user data", error as Error);
-            // If refresh fails, user might be logged out
-            get().logout();
+            // Don't logout on refresh failure - token might still be valid
+            // Only logout if we get a 401 (unauthorized)
+            const apiError = error as any;
+            if (apiError?.statusCode === 401) {
+              // Token is invalid, logout
+              get().logout();
+            }
+            // Otherwise, just log the error but don't logout
           } finally {
             set({ isLoading: false });
           }

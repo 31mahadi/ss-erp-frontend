@@ -11,6 +11,7 @@ import type {
   RoleSubmoduleAccess,
   RoleFeatureAccess,
   RoleFeatureOperationAccess,
+  PermissionTreeModule,
 } from "../domain/types";
 
 export class SystemManagementService {
@@ -242,6 +243,72 @@ export class SystemManagementService {
 
   async revokeRoleFeatureOperationAccess(roleId: string, featureId: string, operationId: string): Promise<void> {
     await apiClient.delete(API_ENDPOINTS.admin.roles.featureOperationAccess.revoke(roleId, featureId, operationId));
+  }
+
+  // Hierarchical Permission Tree
+  async getHierarchicalPermissionTree(): Promise<PermissionTreeModule[]> {
+    const response = await apiClient.get<PermissionTreeModule[]>(API_ENDPOINTS.admin.permissions.tree);
+    return response.data || [];
+  }
+
+  async getRoleHierarchicalPermissions(roleId: string): Promise<PermissionTreeModule[]> {
+    const response = await apiClient.get<PermissionTreeModule[]>(API_ENDPOINTS.admin.roles.permissions.tree(roleId));
+    return response.data || [];
+  }
+
+  // User Permission Management
+  async getUserHierarchicalPermissions(userId: string): Promise<PermissionTreeModule[]> {
+    const response = await apiClient.get<PermissionTreeModule[]>(API_ENDPOINTS.admin.users.permissions.tree(userId));
+    return response.data || [];
+  }
+
+  async grantUserSubmoduleAccess(userId: string, submoduleId: string): Promise<void> {
+    await apiClient.post(API_ENDPOINTS.admin.users.permissions.grantSubmodule(userId), { submoduleId });
+  }
+
+  async revokeUserSubmoduleAccess(userId: string, submoduleId: string): Promise<void> {
+    await apiClient.delete(API_ENDPOINTS.admin.users.permissions.revokeSubmodule(userId, submoduleId));
+  }
+
+  async grantUserFeatureAccess(userId: string, featureId: string): Promise<void> {
+    await apiClient.post(API_ENDPOINTS.admin.users.permissions.grantFeature(userId), { featureId });
+  }
+
+  async revokeUserFeatureAccess(userId: string, featureId: string): Promise<void> {
+    await apiClient.delete(API_ENDPOINTS.admin.users.permissions.revokeFeature(userId, featureId));
+  }
+
+  async grantUserFeatureOperationAccess(userId: string, featureId: string, operationId: string): Promise<void> {
+    await apiClient.post(API_ENDPOINTS.admin.users.permissions.grantOperation(userId), { featureId, operationId });
+  }
+
+  async revokeUserFeatureOperationAccess(userId: string, featureId: string, operationId: string): Promise<void> {
+    await apiClient.delete(API_ENDPOINTS.admin.users.permissions.revokeOperation(userId, featureId, operationId));
+  }
+
+  // User Permission Denials (explicitly remove access even if role has it)
+  async denyUserSubmoduleAccess(userId: string, submoduleId: string): Promise<void> {
+    await apiClient.post(API_ENDPOINTS.admin.users.permissions.denySubmodule(userId), { submoduleId });
+  }
+
+  async removeUserSubmoduleDenial(userId: string, submoduleId: string): Promise<void> {
+    await apiClient.delete(API_ENDPOINTS.admin.users.permissions.removeSubmoduleDenial(userId, submoduleId));
+  }
+
+  async denyUserFeatureAccess(userId: string, featureId: string): Promise<void> {
+    await apiClient.post(API_ENDPOINTS.admin.users.permissions.denyFeature(userId), { featureId });
+  }
+
+  async removeUserFeatureDenial(userId: string, featureId: string): Promise<void> {
+    await apiClient.delete(API_ENDPOINTS.admin.users.permissions.removeFeatureDenial(userId, featureId));
+  }
+
+  async denyUserFeatureOperationAccess(userId: string, featureId: string, operationId: string): Promise<void> {
+    await apiClient.post(API_ENDPOINTS.admin.users.permissions.denyOperation(userId), { featureId, operationId });
+  }
+
+  async removeUserFeatureOperationDenial(userId: string, featureId: string, operationId: string): Promise<void> {
+    await apiClient.delete(API_ENDPOINTS.admin.users.permissions.removeOperationDenial(userId, featureId, operationId));
   }
 }
 

@@ -2,80 +2,26 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus } from "lucide-react";
 import * as React from "react";
-import { useForm } from "react-hook-form";
-import { createRoleSchema, type CreateRoleInput } from "../../domain/schema";
-import { useCreateRole, useDeleteRole, useRoles } from "../../hooks/use-system-management";
+import { useDeleteRole, useRoles } from "../../hooks/use-system-management";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/lib/hooks/use-toast";
 
-export function RolesTab() {
+interface RolesTabProps {
+  onSelectRole?: (roleId: string) => void;
+}
+
+export function RolesTab({ onSelectRole }: RolesTabProps = {}) {
   const { data: roles, isLoading } = useRoles();
-  const createRole = useCreateRole();
   const deleteRole = useDeleteRole();
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<CreateRoleInput>({
-    resolver: zodResolver(createRoleSchema),
-  });
-
-  const onSubmit = async (data: CreateRoleInput) => {
-    try {
-      await createRole.mutateAsync(data);
-      reset();
-      setIsDialogOpen(false);
-    } catch (error) {
-      console.error("Failed to create role:", error);
-    }
-  };
+  const toast = useToast();
+  const [deletingRoleId, setDeletingRoleId] = React.useState<string | null>(null);
 
   if (isLoading) return <div>Loading...</div>;
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Roles</h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => reset()}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Role
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Role</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" {...register("name")} />
-                {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Input id="description" {...register("description")} />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Create</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>All Roles</CardTitle>
@@ -92,13 +38,17 @@ export function RolesTab() {
             </TableHeader>
             <TableBody>
               {roles?.map((role) => (
-                <TableRow key={role.id}>
+                <TableRow 
+                  key={role.id}
+                  className={onSelectRole ? "cursor-pointer hover:bg-accent/50" : ""}
+                  onClick={onSelectRole ? () => onSelectRole(role.id) : undefined}
+                >
                   <TableCell className="font-medium">{role.name}</TableCell>
                   <TableCell>{role.description || "-"}</TableCell>
                   <TableCell>{role.isSystemRole ? "Yes" : "No"}</TableCell>
-                  <TableCell>
-                    {!role.isSystemRole && (
-                      <Button variant="ghost" size="sm" onClick={() => deleteRole.mutate(role.id)}>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    {!role.isSystemRole && role.name !== 'Root Admin' && (
+                      <Button variant="ghost" size="sm" onClick={() => setDeletingRoleId(role.id)}>
                         Delete
                       </Button>
                     )}
@@ -109,6 +59,27 @@ export function RolesTab() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation */}
+      {deletingRoleId && (
+        <ConfirmDialog
+          open={!!deletingRoleId}
+          onOpenChange={(open) => !open && setDeletingRoleId(null)}
+          onConfirm={async () => {
+            try {
+              await deleteRole.mutateAsync(deletingRoleId);
+              toast.success("Role deleted successfully");
+              setDeletingRoleId(null);
+            } catch (error: any) {
+              toast.error(error?.message || "Failed to delete role");
+            }
+          }}
+          title="Delete Role?"
+          description="Are you sure you want to delete this role? This action cannot be undone."
+          variant="destructive"
+          confirmText="Delete"
+        />
+      )}
     </div>
   );
 }

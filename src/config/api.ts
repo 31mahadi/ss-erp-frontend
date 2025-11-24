@@ -106,6 +106,31 @@ export const API_ENDPOINTS = {
         grant: (id: string) => `/admin/roles/${id}/view-access`,
         revoke: (id: string, viewId: string) => `/admin/roles/${id}/view-access/${viewId}`,
       },
+      permissions: {
+        tree: (id: string) => `/admin/roles/${id}/permissions/tree`,
+      },
+    },
+    permissions: {
+      tree: "/admin/permissions/tree",
+    },
+    users: {
+      permissions: {
+        tree: (id: string) => `/admin/users/${id}/permissions/tree`,
+        grantSubmodule: (id: string) => `/admin/users/${id}/submodule-access`,
+        revokeSubmodule: (id: string, submoduleId: string) => `/admin/users/${id}/submodule-access/${submoduleId}`,
+        grantFeature: (id: string) => `/admin/users/${id}/feature-access`,
+        revokeFeature: (id: string, featureId: string) => `/admin/users/${id}/feature-access/${featureId}`,
+        grantOperation: (id: string) => `/admin/users/${id}/feature-operation-access`,
+        revokeOperation: (id: string, featureId: string, operationId: string) =>
+          `/admin/users/${id}/feature-operation-access/${featureId}/${operationId}`,
+        denySubmodule: (id: string) => `/admin/users/${id}/submodule-denial`,
+        removeSubmoduleDenial: (id: string, submoduleId: string) => `/admin/users/${id}/submodule-denial/${submoduleId}`,
+        denyFeature: (id: string) => `/admin/users/${id}/feature-denial`,
+        removeFeatureDenial: (id: string, featureId: string) => `/admin/users/${id}/feature-denial/${featureId}`,
+        denyOperation: (id: string) => `/admin/users/${id}/feature-operation-denial`,
+        removeOperationDenial: (id: string, featureId: string, operationId: string) =>
+          `/admin/users/${id}/feature-operation-denial/${featureId}/${operationId}`,
+      },
     },
   },
 } as const;

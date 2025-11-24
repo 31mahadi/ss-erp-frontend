@@ -104,3 +104,52 @@ export interface RoleFeatureOperationAccess {
   operation?: Operation;
 }
 
+export interface PermissionTreeOperation {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  isDefault: boolean;
+  hasAccess?: boolean;
+  isExplicit?: boolean;
+  isDenied?: boolean; // Explicitly denied even if role has it
+}
+
+export interface PermissionTreeFeature {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  route?: string;
+  icon?: string;
+  order: number;
+  hasAccess?: boolean;
+  isExplicit?: boolean;
+  isDenied?: boolean; // Explicitly denied even if role has it
+  operations: PermissionTreeOperation[];
+}
+
+export interface PermissionTreeSubmodule {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+  order: number;
+  hasAccess?: boolean;
+  isExplicit?: boolean;
+  isDenied?: boolean; // Explicitly denied even if role has it
+  features: PermissionTreeFeature[];
+}
+
+export interface PermissionTreeModule {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+  order: number;
+  hasAccess?: boolean;
+  submodules: PermissionTreeSubmodule[];
+}
+
