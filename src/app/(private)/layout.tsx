@@ -1,7 +1,8 @@
 "use client";
 
 import { Sidebar } from "@/components/layout/sidebar";
-import { Topbar } from "@/components/layout/topbar";
+import { SidebarProvider, useSidebar } from "@/components/layout/sidebar-context";
+import { cn } from "@/lib/utils/cn";
 import { useAuthStore } from "@/lib/auth/auth-store";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -40,10 +41,24 @@ export default function PrivateLayout({
   }
 
   return (
+    <SidebarProvider>
+      <LayoutContent>{children}</LayoutContent>
+    </SidebarProvider>
+  );
+}
+
+function LayoutContent({ children }: { children: React.ReactNode }) {
+  const { isOpen } = useSidebar();
+
+  return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <div className="flex flex-1 flex-col transition-all duration-300 ml-72">
-        <Topbar />
+      <div
+        className={cn(
+          "flex flex-1 flex-col transition-[margin-left] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+          isOpen ? "ml-64" : "ml-16"
+        )}
+      >
         <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>
     </div>
