@@ -29,7 +29,23 @@ interface RolePermissionsTabProps {
 export function RolePermissionsTab({ roleId: initialRoleId, onBack }: RolePermissionsTabProps = {}) {
   const { data: roles } = useRoles();
   const [selectedRoleId, setSelectedRoleId] = React.useState<string>(initialRoleId || "");
-  const { data: permissionTree, isLoading } = useRoleHierarchicalPermissions(selectedRoleId);
+  
+  // Sync initialRoleId with selectedRoleId when it changes
+  React.useEffect(() => {
+    if (initialRoleId) {
+      setSelectedRoleId(initialRoleId);
+    }
+  }, [initialRoleId]);
+
+  const { data: permissionTree, isLoading, refetch: refetchPermissions } = useRoleHierarchicalPermissions(selectedRoleId);
+  
+  // Refetch permissions when selectedRoleId changes
+  React.useEffect(() => {
+    if (selectedRoleId) {
+      refetchPermissions();
+    }
+  }, [selectedRoleId, refetchPermissions]);
+  
   const toast = useToast();
 
   const grantModuleAccess = useGrantRoleModuleAccess();
@@ -59,7 +75,9 @@ export function RolePermissionsTab({ roleId: initialRoleId, onBack }: RolePermis
     if (permissionTree) {
       permissionTree.forEach((module) => {
         module.submodules.forEach((submodule) => {
-          if (submodule.hasAccess === true && module.hasAccess !== true) {
+          // For roles: include if it has access (all role permissions are toggleable)
+          // Explicit means directly granted (not inherited from parent)
+          if (submodule.hasAccess === true) {
             set.add(submodule.id);
           }
         });
@@ -74,11 +92,9 @@ export function RolePermissionsTab({ roleId: initialRoleId, onBack }: RolePermis
       permissionTree.forEach((module) => {
         module.submodules.forEach((submodule) => {
           submodule.features.forEach((feature) => {
-            if (
-              feature.hasAccess === true &&
-              module.hasAccess !== true &&
-              submodule.hasAccess !== true
-            ) {
+            // For roles: include if it has access (all role permissions are toggleable)
+            // Explicit means directly granted (not inherited from parent)
+            if (feature.hasAccess === true) {
               set.add(feature.id);
             }
           });
@@ -96,12 +112,9 @@ export function RolePermissionsTab({ roleId: initialRoleId, onBack }: RolePermis
           submodule.features.forEach((feature) => {
             const ops = new Set<string>();
             feature.operations.forEach((operation) => {
-              if (
-                operation.hasAccess === true &&
-                module.hasAccess !== true &&
-                submodule.hasAccess !== true &&
-                feature.hasAccess !== true
-              ) {
+              // For roles: include if it has access (all role permissions are toggleable)
+              // Explicit means directly granted (not inherited from parent)
+              if (operation.hasAccess === true) {
                 ops.add(operation.id);
               }
             });
@@ -121,59 +134,64 @@ export function RolePermissionsTab({ roleId: initialRoleId, onBack }: RolePermis
       try {
         if (checked) {
           await grantModuleAccess.mutateAsync({ roleId: selectedRoleId, moduleId });
-          toast.success("Module access granted");
         } else {
           await revokeModuleAccess.mutateAsync({ roleId: selectedRoleId, moduleId });
-          toast.success("Module access revoked");
         }
+        // Refetch permissions after mutation
+        await refetchPermissions();
+        toast.success(`Module access ${checked ? "granted" : "revoked"}`);
       } catch (error) {
         toast.error(`Failed to ${checked ? "grant" : "revoke"} module access`);
         console.error("Module toggle error:", error);
       }
     },
-    [selectedRoleId, grantModuleAccess, revokeModuleAccess, toast]
+    [selectedRoleId, grantModuleAccess, revokeModuleAccess, toast, refetchPermissions]
   );
 
   const handleSubmoduleToggle = React.useCallback(
-    async (submoduleId: string, checked: boolean) => {
+    async (submoduleId: string, checked: boolean, moduleId: string) => {
       if (!selectedRoleId) return;
       try {
         if (checked) {
           await grantSubmoduleAccess.mutateAsync({ roleId: selectedRoleId, submoduleId });
-          toast.success("Submodule access granted");
         } else {
           await revokeSubmoduleAccess.mutateAsync({ roleId: selectedRoleId, submoduleId });
-          toast.success("Submodule access revoked");
         }
+        // Refetch permissions after mutation
+        await refetchPermissions();
+        toast.success(`Submodule access ${checked ? "granted" : "revoked"}`);
       } catch (error) {
-        toast.error(`Failed to ${checked ? "grant" : "revoke"} submodule access`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        toast.error(`Failed to ${checked ? "grant" : "revoke"} submodule access: ${errorMessage}`);
         console.error("Submodule toggle error:", error);
       }
     },
-    [selectedRoleId, grantSubmoduleAccess, revokeSubmoduleAccess, toast]
+    [selectedRoleId, grantSubmoduleAccess, revokeSubmoduleAccess, toast, refetchPermissions]
   );
 
   const handleFeatureToggle = React.useCallback(
-    async (featureId: string, checked: boolean) => {
+    async (featureId: string, checked: boolean, submoduleId: string, moduleId: string) => {
       if (!selectedRoleId) return;
       try {
         if (checked) {
           await grantFeatureAccess.mutateAsync({ roleId: selectedRoleId, featureId });
-          toast.success("Feature access granted");
         } else {
           await revokeFeatureAccess.mutateAsync({ roleId: selectedRoleId, featureId });
-          toast.success("Feature access revoked");
         }
+        // Refetch permissions after mutation
+        await refetchPermissions();
+        toast.success(`Feature access ${checked ? "granted" : "revoked"}`);
       } catch (error) {
-        toast.error(`Failed to ${checked ? "grant" : "revoke"} feature access`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        toast.error(`Failed to ${checked ? "grant" : "revoke"} feature access: ${errorMessage}`);
         console.error("Feature toggle error:", error);
       }
     },
-    [selectedRoleId, grantFeatureAccess, revokeFeatureAccess, toast]
+    [selectedRoleId, grantFeatureAccess, revokeFeatureAccess, toast, refetchPermissions]
   );
 
   const handleOperationToggle = React.useCallback(
-    async (featureId: string, operationId: string, checked: boolean) => {
+    async (featureId: string, operationId: string, checked: boolean, submoduleId: string, moduleId: string) => {
       if (!selectedRoleId) return;
       try {
         if (checked) {
@@ -182,21 +200,23 @@ export function RolePermissionsTab({ roleId: initialRoleId, onBack }: RolePermis
             featureId,
             operationId,
           });
-          toast.success("Operation access granted");
         } else {
           await revokeFeatureOperationAccess.mutateAsync({
             roleId: selectedRoleId,
             featureId,
             operationId,
           });
-          toast.success("Operation access revoked");
         }
+        // Refetch permissions after mutation
+        await refetchPermissions();
+        toast.success(`Operation access ${checked ? "granted" : "revoked"}`);
       } catch (error) {
-        toast.error(`Failed to ${checked ? "grant" : "revoke"} operation access`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        toast.error(`Failed to ${checked ? "grant" : "revoke"} operation access: ${errorMessage}`);
         console.error("Operation toggle error:", error);
       }
     },
-    [selectedRoleId, grantFeatureOperationAccess, revokeFeatureOperationAccess, toast]
+    [selectedRoleId, grantFeatureOperationAccess, revokeFeatureOperationAccess, toast, refetchPermissions]
   );
 
   // Convert permission tree to flat structure for PermissionTree component

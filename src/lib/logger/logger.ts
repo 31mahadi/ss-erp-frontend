@@ -34,15 +34,53 @@ class Logger {
 
     if (!this.enabled) return;
 
-    const logMethod = console[level] || console.log;
     const prefix = `[${level.toUpperCase()}] ${entry.timestamp.toISOString()}`;
 
     if (error) {
-      logMethod(prefix, message, context, error);
-    } else if (context) {
-      logMethod(prefix, message, context);
+      // Serialize error properly
+      const errorInfo = {
+        message: error.message || String(error),
+        stack: error.stack,
+        name: error.name,
+      };
+
+      if (level === "error") {
+        // Use console.error specifically for errors
+        // Filter out undefined values from context
+        const filteredContext = context ? Object.fromEntries(
+          Object.entries(context).filter(([_, value]) => value !== undefined)
+        ) : {};
+        
+        if (Object.keys(filteredContext).length > 0) {
+          console.error(prefix, message, { ...filteredContext, error: errorInfo });
+        } else {
+          console.error(prefix, message, errorInfo);
+        }
+      } else {
+        const logMethod = (console[level as keyof Console] || console.log) as typeof console.log;
+        // Filter out undefined values from context
+        const filteredContext = context ? Object.fromEntries(
+          Object.entries(context).filter(([_, value]) => value !== undefined)
+        ) : {};
+        
+        if (Object.keys(filteredContext).length > 0) {
+          logMethod(prefix, message, { ...filteredContext, error: errorInfo });
+        } else {
+          logMethod(prefix, message, errorInfo);
+        }
+      }
     } else {
-      logMethod(prefix, message);
+      // Filter out undefined values from context
+      const filteredContext = context ? Object.fromEntries(
+        Object.entries(context).filter(([_, value]) => value !== undefined)
+      ) : {};
+      
+      const logMethod = (console[level as keyof Console] || console.log) as typeof console.log;
+      if (Object.keys(filteredContext).length > 0) {
+        logMethod(prefix, message, filteredContext);
+      } else {
+        logMethod(prefix, message);
+      }
     }
   }
 

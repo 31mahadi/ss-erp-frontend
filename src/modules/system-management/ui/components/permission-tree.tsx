@@ -13,9 +13,9 @@ interface PermissionTreeProps {
   selectedFeatures: Set<string>;
   selectedOperations: Map<string, Set<string>>; // featureId -> Set<operationId>
   onModuleToggle: (moduleId: string, checked: boolean) => void;
-  onSubmoduleToggle: (submoduleId: string, checked: boolean) => void;
-  onFeatureToggle: (featureId: string, checked: boolean) => void;
-  onOperationToggle: (featureId: string, operationId: string, checked: boolean) => void;
+  onSubmoduleToggle: (submoduleId: string, checked: boolean, moduleId: string) => void;
+  onFeatureToggle: (featureId: string, checked: boolean, submoduleId: string, moduleId: string) => void;
+  onOperationToggle: (featureId: string, operationId: string, checked: boolean, submoduleId: string, moduleId: string) => void;
   readOnly?: boolean;
 }
 
@@ -70,29 +70,36 @@ export function PermissionTree({
     onModuleToggle(moduleId, checked);
   };
 
-  const handleSubmoduleToggle = (submoduleId: string, checked: boolean) => {
+  const handleSubmoduleToggle = (submoduleId: string, checked: boolean, moduleId: string) => {
     if (readOnly) return;
-    onSubmoduleToggle(submoduleId, checked);
+    onSubmoduleToggle(submoduleId, checked, moduleId);
   };
 
-  const handleFeatureToggle = (featureId: string, checked: boolean) => {
+  const handleFeatureToggle = (featureId: string, checked: boolean, submoduleId: string, moduleId: string) => {
     if (readOnly) return;
-    onFeatureToggle(featureId, checked);
+    onFeatureToggle(featureId, checked, submoduleId, moduleId);
   };
 
-  const handleOperationToggle = (featureId: string, operationId: string, checked: boolean) => {
+  const handleOperationToggle = (featureId: string, operationId: string, checked: boolean, submoduleId: string, moduleId: string) => {
     if (readOnly) return;
-    onOperationToggle(featureId, operationId, checked);
+    onOperationToggle(featureId, operationId, checked, submoduleId, moduleId);
   };
 
   const isModuleChecked = (module: PermissionTreeModule): boolean => {
-    return selectedModules.has(module.id);
+    // Atomic evaluation: check if module has access (from API response)
+    // This reflects the actual permission state from backend (manual_add, role_permissions, or default deny)
+    if (module.hasAccess === true) return true;
+    
+    // Fallback: if module is explicitly selected (manual_add), show as checked
+    if (selectedModules.has(module.id)) return true;
+    
+    return false;
   };
 
   const isModuleIndeterminate = (module: PermissionTreeModule): boolean => {
     if (selectedModules.has(module.id)) return false;
-    // Check if any submodule, feature, or operation is selected
-    return module.submodules.some((submodule) => {
+    // Check if any submodule, feature, or operation is selected (but not all)
+    const hasSomeSelected = module.submodules.some((submodule) => {
       if (selectedSubmodules.has(submodule.id)) return true;
       return submodule.features.some((feature) => {
         if (selectedFeatures.has(feature.id)) return true;
@@ -100,11 +107,19 @@ export function PermissionTree({
         return featureOps && featureOps.size > 0;
       });
     });
+    const allSelected = isModuleChecked(module);
+    return hasSomeSelected && !allSelected;
   };
 
   const isSubmoduleChecked = (submodule: PermissionTreeSubmodule, moduleId: string): boolean => {
-    if (selectedModules.has(moduleId)) return true;
-    return selectedSubmodules.has(submodule.id);
+    // Atomic evaluation: check if submodule has access (from API response)
+    // This reflects the actual permission state from backend (manual_add, role_permissions, or default deny)
+    if (submodule.hasAccess === true) return true;
+    
+    // Fallback: if submodule is explicitly selected (manual_add), show as checked
+    if (selectedSubmodules.has(submodule.id)) return true;
+    
+    return false;
   };
 
   const isSubmoduleIndeterminate = (submodule: PermissionTreeSubmodule, moduleId: string): boolean => {
@@ -117,8 +132,14 @@ export function PermissionTree({
   };
 
   const isFeatureChecked = (feature: PermissionTreeFeature, submoduleId: string, moduleId: string): boolean => {
-    if (selectedModules.has(moduleId) || selectedSubmodules.has(submoduleId)) return true;
-    return selectedFeatures.has(feature.id);
+    // Atomic evaluation: check if feature has access (from API response)
+    // This reflects the actual permission state from backend (manual_add, role_permissions, or default deny)
+    if (feature.hasAccess === true) return true;
+    
+    // Fallback: if feature is explicitly selected (manual_add), show as checked
+    if (selectedFeatures.has(feature.id)) return true;
+    
+    return false;
   };
 
   const isFeatureIndeterminate = (feature: PermissionTreeFeature, submoduleId: string, moduleId: string): boolean => {
@@ -126,7 +147,10 @@ export function PermissionTree({
       return false;
     }
     const featureOps = selectedOperations.get(feature.id);
-    return featureOps && featureOps.size > 0;
+    const hasSomeOps = featureOps && featureOps.size > 0;
+    const allOpsSelected = feature.operations.length > 0 && featureOps && 
+      feature.operations.every((op) => featureOps.has(op.id));
+    return hasSomeOps && !allOpsSelected;
   };
 
   const isOperationChecked = (
@@ -135,11 +159,20 @@ export function PermissionTree({
     submoduleId: string,
     moduleId: string,
   ): boolean => {
-    if (selectedModules.has(moduleId) || selectedSubmodules.has(submoduleId) || selectedFeatures.has(featureId)) {
+    // Primary check: use the operation's hasAccess property from the API
+    // This is the source of truth from the backend
+    if (operation.hasAccess === true) {
       return true;
     }
+    
+    // Fallback: If operation is in selectedOperations set (explicitly granted), show as checked
+    // This is for cases where the API might not have updated yet
     const featureOps = selectedOperations.get(featureId);
-    return featureOps ? featureOps.has(operation.id) : false;
+    if (featureOps && featureOps.has(operation.id)) {
+      return true;
+    }
+    
+    return false;
   };
 
   return (
@@ -226,7 +259,7 @@ export function PermissionTree({
                             el.indeterminate = submoduleIndeterminate;
                           }
                         }}
-                        onCheckedChange={(checked) => handleSubmoduleToggle(submodule.id, checked === true)}
+                        onCheckedChange={(checked) => handleSubmoduleToggle(submodule.id, checked === true, module.id)}
                         disabled={readOnly}
                         className="mr-2"
                       />
@@ -269,8 +302,8 @@ export function PermissionTree({
                             el.indeterminate = submoduleIndeterminate;
                           }
                         }}
-                        onCheckedChange={(checked) => handleSubmoduleToggle(submodule.id, checked === true)}
-                        disabled={readOnly}
+                        onCheckedChange={(checked) => handleSubmoduleToggle(submodule.id, checked === true, module.id)}
+                        disabled={readOnly || (submodule.hasAccess && submodule.isExplicit === false && !selectedSubmodules.has(submodule.id))}
                         className="mr-2"
                       />
                       <label
@@ -306,8 +339,8 @@ export function PermissionTree({
                                     el.indeterminate = featureIndeterminate;
                                   }
                                 }}
-                                onCheckedChange={(checked) => handleFeatureToggle(feature.id, checked === true)}
-                                disabled={readOnly}
+                                onCheckedChange={(checked) => handleFeatureToggle(feature.id, checked === true, submodule.id, module.id)}
+                                disabled={readOnly || (feature.hasAccess && feature.isExplicit === false && !selectedFeatures.has(feature.id))}
                                 className="mr-2"
                               />
                               <label className="flex-1 text-sm cursor-pointer flex items-center gap-2">
@@ -355,8 +388,8 @@ export function PermissionTree({
                                     el.indeterminate = featureIndeterminate;
                                   }
                                 }}
-                                onCheckedChange={(checked) => handleFeatureToggle(feature.id, checked === true)}
-                                disabled={readOnly}
+                                onCheckedChange={(checked) => handleFeatureToggle(feature.id, checked === true, submodule.id, module.id)}
+                                disabled={readOnly || (feature.hasAccess && feature.isExplicit === false && !selectedFeatures.has(feature.id))}
                                 className="mr-2"
                               />
                               <label
@@ -387,14 +420,22 @@ export function PermissionTree({
                                   <div
                                     key={operation.id}
                                     className="flex items-center space-x-2 py-0.5 px-2 rounded-md hover:bg-accent/10 transition-colors"
+                                    onClick={(e) => {
+                                      // Prevent event propagation to parent elements
+                                      e.stopPropagation();
+                                    }}
                                   >
                                     <div className="w-5" />
                                     <Checkbox
                                       checked={operationChecked}
-                                      onCheckedChange={(checked) =>
-                                        handleOperationToggle(feature.id, operation.id, checked === true)
-                                      }
-                                      disabled={readOnly}
+                                      onCheckedChange={(checked) => {
+                                        handleOperationToggle(feature.id, operation.id, checked === true, submodule.id, module.id);
+                                      }}
+                                      onClick={(e) => {
+                                        // Prevent event propagation
+                                        e.stopPropagation();
+                                      }}
+                                      disabled={readOnly || (operation.hasAccess && operation.isExplicit === false && !selectedOperations.get(feature.id)?.has(operation.id))}
                                       className="mr-2"
                                     />
                                     <label className="flex-1 text-xs cursor-pointer flex items-center gap-2">

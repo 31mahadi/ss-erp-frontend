@@ -356,6 +356,10 @@ export function useGrantRoleModuleAccess() {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["roles", variables.roleId, "module-access"] });
+      // Force refetch
+      queryClient.refetchQueries({ 
+        queryKey: ["roles", variables.roleId, "permissions", "tree"],
+      });
     },
   });
 }
@@ -371,6 +375,10 @@ export function useRevokeRoleModuleAccess() {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["roles", variables.roleId, "module-access"] });
+      // Force refetch
+      queryClient.refetchQueries({ 
+        queryKey: ["roles", variables.roleId, "permissions", "tree"],
+      });
     },
   });
 }
@@ -394,6 +402,10 @@ export function useGrantRoleSubmoduleAccess() {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["roles", variables.roleId, "submodule-access"] });
+      // Force refetch
+      queryClient.refetchQueries({ 
+        queryKey: ["roles", variables.roleId, "permissions", "tree"],
+      });
     },
   });
 }
@@ -409,6 +421,10 @@ export function useRevokeRoleSubmoduleAccess() {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["roles", variables.roleId, "submodule-access"] });
+      // Force refetch
+      queryClient.refetchQueries({ 
+        queryKey: ["roles", variables.roleId, "permissions", "tree"],
+      });
     },
   });
 }
@@ -432,6 +448,10 @@ export function useGrantRoleFeatureAccess() {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["roles", variables.roleId, "feature-access"] });
+      // Force refetch
+      queryClient.refetchQueries({ 
+        queryKey: ["roles", variables.roleId, "permissions", "tree"],
+      });
     },
   });
 }
@@ -447,6 +467,10 @@ export function useRevokeRoleFeatureAccess() {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["roles", variables.roleId, "feature-access"] });
+      // Force refetch
+      queryClient.refetchQueries({ 
+        queryKey: ["roles", variables.roleId, "permissions", "tree"],
+      });
     },
   });
 }
@@ -470,6 +494,10 @@ export function useGrantRoleFeatureOperationAccess() {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["roles", variables.roleId, "feature-operation-access"] });
+      // Force refetch
+      queryClient.refetchQueries({ 
+        queryKey: ["roles", variables.roleId, "permissions", "tree"],
+      });
     },
   });
 }
@@ -485,6 +513,10 @@ export function useRevokeRoleFeatureOperationAccess() {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["roles", variables.roleId, "feature-operation-access"] });
+      // Force refetch
+      queryClient.refetchQueries({ 
+        queryKey: ["roles", variables.roleId, "permissions", "tree"],
+      });
     },
   });
 }
@@ -525,9 +557,23 @@ export function useRemoveOperationFromFeature() {
 
 // Hierarchical Permission Tree
 export function useHierarchicalPermissionTree() {
+  const { isAuthenticated } = useAuthStore();
+  
   return useQuery({
     queryKey: ["permissions", "tree"],
     queryFn: () => systemManagementService.getHierarchicalPermissionTree(),
+    enabled: isAuthenticated, // Only fetch when authenticated
+    retry: (failureCount, error: any) => {
+      // Don't retry on 401 errors (authentication errors)
+      if (error?.statusCode === 401) {
+        return false;
+      }
+      // Retry up to 2 times for other errors
+      return failureCount < 2;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 60000, // Consider data fresh for 60 seconds
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 }
 
@@ -536,6 +582,8 @@ export function useRoleHierarchicalPermissions(roleId: string) {
     queryKey: ["roles", roleId, "permissions", "tree"],
     queryFn: () => systemManagementService.getRoleHierarchicalPermissions(roleId),
     enabled: !!roleId,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -545,6 +593,8 @@ export function useUserHierarchicalPermissions(userId: string) {
     queryKey: ["users", userId, "permissions", "tree"],
     queryFn: () => systemManagementService.getUserHierarchicalPermissions(userId),
     enabled: !!userId,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -558,6 +608,10 @@ export function useGrantUserSubmoduleAccess() {
       queryClient.invalidateQueries({ 
         queryKey: ["users", variables.userId, "permissions"],
         exact: false, // Invalidate all queries that start with this key
+      });
+      // Force refetch
+      queryClient.refetchQueries({ 
+        queryKey: ["users", variables.userId, "permissions", "tree"],
       });
     },
   });
@@ -573,6 +627,10 @@ export function useRevokeUserSubmoduleAccess() {
         queryKey: ["users", variables.userId, "permissions"],
         exact: false,
       });
+      // Force refetch
+      queryClient.refetchQueries({ 
+        queryKey: ["users", variables.userId, "permissions", "tree"],
+      });
     },
   });
 }
@@ -587,6 +645,10 @@ export function useGrantUserFeatureAccess() {
         queryKey: ["users", variables.userId, "permissions"],
         exact: false,
       });
+      // Force refetch
+      queryClient.refetchQueries({ 
+        queryKey: ["users", variables.userId, "permissions", "tree"],
+      });
     },
   });
 }
@@ -600,6 +662,10 @@ export function useRevokeUserFeatureAccess() {
       queryClient.invalidateQueries({ 
         queryKey: ["users", variables.userId, "permissions"],
         exact: false,
+      });
+      // Force refetch
+      queryClient.refetchQueries({ 
+        queryKey: ["users", variables.userId, "permissions", "tree"],
       });
     },
   });
@@ -622,6 +688,10 @@ export function useGrantUserFeatureOperationAccess() {
         queryKey: ["users", variables.userId, "permissions"],
         exact: false,
       });
+      // Force refetch
+      queryClient.refetchQueries({ 
+        queryKey: ["users", variables.userId, "permissions", "tree"],
+      });
     },
   });
 }
@@ -642,6 +712,10 @@ export function useRevokeUserFeatureOperationAccess() {
       queryClient.invalidateQueries({ 
         queryKey: ["users", variables.userId, "permissions"],
         exact: false,
+      });
+      // Force refetch
+      queryClient.refetchQueries({ 
+        queryKey: ["users", variables.userId, "permissions", "tree"],
       });
     },
   });

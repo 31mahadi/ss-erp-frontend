@@ -34,7 +34,9 @@ class ApiClient {
         }
       } catch (error) {
         // If we can't decode the token, don't schedule refresh
-        logger.warn("Could not decode token for expiry time", error as Error);
+        logger.warn("Could not decode token for expiry time", {
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     } else {
       this.tokenExpiryTime = null;
@@ -68,10 +70,18 @@ class ApiClient {
              error.message.includes('Network request failed') ||
              error.message.includes('Load failed'));
           
+          const errorContext = {
+            error: error instanceof Error ? {
+              message: error.message,
+              stack: error.stack,
+              name: error.name,
+            } : String(error),
+          };
+          
           if (isNetworkError) {
-            logger.debug("Proactive token refresh failed - network error (may be temporary)", error as Error);
+            logger.debug("Proactive token refresh failed - network error (may be temporary)", errorContext);
           } else {
-            logger.warn("Proactive token refresh failed", error as Error);
+            logger.warn("Proactive token refresh failed", errorContext);
           }
         });
       }, refreshTime);
@@ -114,10 +124,18 @@ class ApiClient {
                  error.message.includes('Network request failed') ||
                  error.message.includes('Load failed'));
               
+              const errorContext = {
+                error: error instanceof Error ? {
+                  message: error.message,
+                  stack: error.stack,
+                  name: error.name,
+                } : String(error),
+              };
+              
               if (isNetworkError) {
-                logger.debug("Proactive token refresh failed - network error (may be temporary)", error as Error);
+                logger.debug("Proactive token refresh failed - network error (may be temporary)", errorContext);
               } else {
-                logger.warn("Proactive token refresh failed", error as Error);
+                logger.warn("Proactive token refresh failed", errorContext);
               }
             });
           }
@@ -374,8 +392,9 @@ class ApiClient {
               // Already logged out - don't emit logout event again
               logger.debug("Token refresh failed - already logged out");
             } else {
-              // Refresh failed but we still have a token - logout user
-              logger.warn("Token refresh failed, logging out user");
+              // Refresh failed but we still have a token - logout user immediately
+              logger.warn("Token refresh failed, logging out user", { endpoint });
+              this.setAccessToken(null);
               eventBus.emit(EVENTS.AUTH_LOGOUT);
             }
             const error: ApiError = {
@@ -385,6 +404,21 @@ class ApiClient {
             };
             throw error;
           }
+        }
+        
+        // If we get 401 after refresh attempt, don't retry - logout immediately
+        if (response.status === 401 && (attempt > 0 || tokenRefreshed || !this.accessToken)) {
+          logger.warn("401 error after refresh attempt or no token - logging out", { endpoint, attempt, tokenRefreshed, hasToken: !!this.accessToken });
+          if (this.accessToken) {
+            this.setAccessToken(null);
+            eventBus.emit(EVENTS.AUTH_LOGOUT);
+          }
+          const error: ApiError = {
+            message: "Session expired. Please login again.",
+            statusCode: 401,
+            error: "Unauthorized",
+          };
+          throw error;
         }
 
         // Only parse JSON if response is ok or we're not retrying
