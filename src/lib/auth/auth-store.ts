@@ -15,23 +15,31 @@ interface AuthStore extends AuthState {
   setTokens: (tokens: AuthTokens) => void;
 }
 
+// Track if we've already initialized to prevent duplicate event listeners
+let isInitialized = false;
+
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => {
       // Initialize API client with persisted token if available
-      if (typeof window !== "undefined") {
+      if (typeof window !== "undefined" && !isInitialized) {
+        isInitialized = true;
+        
         // Try to restore access token from a separate storage (since we don't persist it in zustand)
         // This is a fallback - the refresh token cookie should handle most cases
         const tokenStorage = localStorage.getItem("auth-token");
         if (tokenStorage) {
           try {
             const { accessToken, expiresAt } = JSON.parse(tokenStorage);
-            // Only restore if token hasn't expired (with 5 minute buffer)
-            if (accessToken && expiresAt && Date.now() < expiresAt - 5 * 60000) {
+            // Only restore if token hasn't expired (with 2 minute buffer for safety)
+            if (accessToken && expiresAt && Date.now() < expiresAt - 2 * 60000) {
               apiClient.setAccessToken(accessToken);
+              logger.debug("Restored access token from storage", { expiresIn: Math.round((expiresAt - Date.now()) / 1000) + "s" });
             } else {
-              // Token expired, clear it
+              // Token expired or about to expire, try to refresh immediately
+              logger.debug("Stored token expired or expiring soon, will refresh");
               localStorage.removeItem("auth-token");
+              // Trigger a refresh on next API call
             }
           } catch {
             // Ignore parse errors
@@ -41,7 +49,20 @@ export const useAuthStore = create<AuthStore>()(
 
         // Listen for token refresh events to keep auth state in sync
         eventBus.on(EVENTS.AUTH_TOKEN_REFRESHED, async (data: { accessToken: string }) => {
-          // Token is automatically set in API client
+          // Store the new token
+          if (data.accessToken) {
+            try {
+              const payload = JSON.parse(atob(data.accessToken.split('.')[1]));
+              const expiresAt = payload.exp ? payload.exp * 1000 : Date.now() + 15 * 60000;
+              localStorage.setItem("auth-token", JSON.stringify({
+                accessToken: data.accessToken,
+                expiresAt,
+              }));
+            } catch {
+              // Ignore decode errors
+            }
+          }
+          
           logger.info("Access token refreshed successfully");
           // Refresh user data to get updated permissions
           // This ensures access store is updated when permissions change

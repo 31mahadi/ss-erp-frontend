@@ -8,6 +8,7 @@ export interface PermissionTreeModule {
   slug: string;
   order: number;
   hasAccess: boolean;
+  hasDirectAccess?: boolean;
   isExplicit?: boolean;
   submodules: PermissionTreeSubmodule[];
 }
@@ -18,6 +19,7 @@ export interface PermissionTreeSubmodule {
   slug: string;
   moduleId: string;
   hasAccess: boolean;
+  hasDirectAccess?: boolean;
   isExplicit?: boolean;
   features: PermissionTreeFeature[];
 }
@@ -28,6 +30,7 @@ export interface PermissionTreeFeature {
   slug: string;
   submoduleId: string;
   hasAccess: boolean;
+  hasDirectAccess?: boolean;
   isExplicit?: boolean;
   operations: PermissionTreeOperation[];
 }
@@ -38,6 +41,7 @@ export interface PermissionTreeOperation {
   slug: string;
   featureId: string;
   hasAccess: boolean;
+  hasDirectAccess?: boolean;
   isExplicit?: boolean;
 }
 

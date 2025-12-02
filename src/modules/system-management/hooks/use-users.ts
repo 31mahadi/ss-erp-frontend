@@ -21,8 +21,14 @@ export function useCreateUser() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateUserInput) => userService.createUser(data),
-    onSuccess: () => {
+    onSuccess: (user) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      // Invalidate user permissions cache for the newly created user
+      if (user?.id) {
+        queryClient.invalidateQueries({
+          queryKey: ['permissions-v2', 'users', user.id, 'permissions'],
+        });
+      }
     },
   });
 }

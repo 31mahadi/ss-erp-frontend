@@ -86,45 +86,77 @@ export function PermissionTree({
   };
 
   const isModuleChecked = (module: PermissionTreeModule): boolean => {
-    // Atomic evaluation: check if module has access (from API response)
-    // This reflects the actual permission state from backend (manual_add, role_permissions, or default deny)
-    if (module.hasAccess === true) return true;
+    // Check if module is explicitly granted (not just inherited from children)
+    if (module.isExplicit === true) return true;
     
-    // Fallback: if module is explicitly selected (manual_add), show as checked
+    // Check if module has direct access (at this level, not from children)
+    if (module.hasDirectAccess === true) return true;
+    
+    // Fallback: if module is in selectedModules set, show as checked
     if (selectedModules.has(module.id)) return true;
     
+    // If module has access but not direct access, it means children have access
+    // In this case, we want to show indeterminate, not checked
     return false;
   };
 
   const isModuleIndeterminate = (module: PermissionTreeModule): boolean => {
-    if (selectedModules.has(module.id)) return false;
+    // If module is explicitly selected or has direct access, not indeterminate
+    if (module.isExplicit === true || module.hasDirectAccess === true || selectedModules.has(module.id)) return false;
+    
+    // Check if module has access from children (hasAccess but not direct access)
+    if (module.hasAccess === true) {
+      return true; // Show as indeterminate when children have access but module not directly granted
+    }
+    
     // Check if any submodule, feature, or operation is selected (but not all)
     const hasSomeSelected = module.submodules.some((submodule) => {
+      if (submodule.hasAccess === true) return true;
       if (selectedSubmodules.has(submodule.id)) return true;
       return submodule.features.some((feature) => {
+        if (feature.hasAccess === true) return true;
         if (selectedFeatures.has(feature.id)) return true;
         const featureOps = selectedOperations.get(feature.id);
         return featureOps && featureOps.size > 0;
       });
     });
-    const allSelected = isModuleChecked(module);
-    return hasSomeSelected && !allSelected;
+    
+    return hasSomeSelected;
   };
 
   const isSubmoduleChecked = (submodule: PermissionTreeSubmodule, moduleId: string): boolean => {
-    // Atomic evaluation: check if submodule has access (from API response)
-    // This reflects the actual permission state from backend (manual_add, role_permissions, or default deny)
-    if (submodule.hasAccess === true) return true;
+    // Check if submodule is explicitly granted (not just inherited from parent or children)
+    if (submodule.isExplicit === true) return true;
     
-    // Fallback: if submodule is explicitly selected (manual_add), show as checked
+    // If parent module is explicitly selected or has direct access, submodule is checked (inherited)
+    if (selectedModules.has(moduleId)) return true;
+    
+    // Check if submodule has direct access (at this level, not from children)
+    if (submodule.hasDirectAccess === true) return true;
+    
+    // Fallback: if submodule is in selectedSubmodules set, show as checked
     if (selectedSubmodules.has(submodule.id)) return true;
     
+    // If submodule has access but not direct access, it might be from children
+    // Return false and let isSubmoduleIndeterminate handle it
     return false;
   };
 
   const isSubmoduleIndeterminate = (submodule: PermissionTreeSubmodule, moduleId: string): boolean => {
-    if (selectedModules.has(moduleId) || selectedSubmodules.has(submodule.id)) return false;
+    // If parent module is explicitly selected, not indeterminate (fully checked)
+    if (selectedModules.has(moduleId)) return false;
+    
+    // If submodule is explicitly selected or has direct access, not indeterminate
+    if (submodule.isExplicit === true || submodule.hasDirectAccess === true || selectedSubmodules.has(submodule.id)) return false;
+    
+    // Check if submodule has access from children (hasAccess but not direct access)
+    if (submodule.hasAccess === true) {
+      return true; // Show as indeterminate when children have access but submodule not directly granted
+    }
+    
+    // Check if any feature or operation is selected
     return submodule.features.some((feature) => {
+      if (feature.hasAccess === true) return true;
       if (selectedFeatures.has(feature.id)) return true;
       const featureOps = selectedOperations.get(feature.id);
       return featureOps && featureOps.size > 0;
@@ -132,25 +164,46 @@ export function PermissionTree({
   };
 
   const isFeatureChecked = (feature: PermissionTreeFeature, submoduleId: string, moduleId: string): boolean => {
-    // Atomic evaluation: check if feature has access (from API response)
-    // This reflects the actual permission state from backend (manual_add, role_permissions, or default deny)
-    if (feature.hasAccess === true) return true;
+    // Check if feature is explicitly granted (not just inherited from parent or children)
+    if (feature.isExplicit === true) return true;
     
-    // Fallback: if feature is explicitly selected (manual_add), show as checked
+    // If parent module or submodule is explicitly selected or has direct access, feature is checked (inherited)
+    if (selectedModules.has(moduleId) || selectedSubmodules.has(submoduleId)) return true;
+    
+    // Check if feature has direct access (at this level, not from children)
+    if (feature.hasDirectAccess === true) return true;
+    
+    // Fallback: if feature is in selectedFeatures set, show as checked
     if (selectedFeatures.has(feature.id)) return true;
     
+    // If feature has access but not direct access, it might be from children
+    // Return false and let isFeatureIndeterminate handle it
     return false;
   };
 
   const isFeatureIndeterminate = (feature: PermissionTreeFeature, submoduleId: string, moduleId: string): boolean => {
-    if (selectedModules.has(moduleId) || selectedSubmodules.has(submoduleId) || selectedFeatures.has(feature.id)) {
-      return false;
+    // If parent module or submodule is explicitly selected, not indeterminate (fully checked)
+    if (selectedModules.has(moduleId) || selectedSubmodules.has(submoduleId)) return false;
+    
+    // If feature is explicitly selected or has direct access, not indeterminate
+    if (feature.isExplicit === true || feature.hasDirectAccess === true || selectedFeatures.has(feature.id)) return false;
+    
+    // Check if feature has access from children (hasAccess but not direct access)
+    if (feature.hasAccess === true) {
+      // Check if all operations have access - if so, show as checked, not indeterminate
+      const allOpsHaveAccess = feature.operations.length > 0 && 
+        feature.operations.every((op) => op.hasAccess === true);
+      if (!allOpsHaveAccess) {
+        return true; // Show as indeterminate when some children have access but not all
+      }
     }
+    
+    // Check if any operation is selected but not all
     const featureOps = selectedOperations.get(feature.id);
     const hasSomeOps = featureOps && featureOps.size > 0;
     const allOpsSelected = feature.operations.length > 0 && featureOps && 
       feature.operations.every((op) => featureOps.has(op.id));
-    return hasSomeOps && !allOpsSelected;
+    return !!(hasSomeOps && !allOpsSelected);
   };
 
   const isOperationChecked = (
@@ -303,7 +356,7 @@ export function PermissionTree({
                           }
                         }}
                         onCheckedChange={(checked) => handleSubmoduleToggle(submodule.id, checked === true, module.id)}
-                        disabled={readOnly || (submodule.hasAccess && submodule.isExplicit === false && !selectedSubmodules.has(submodule.id))}
+                        disabled={readOnly}
                         className="mr-2"
                       />
                       <label
@@ -340,7 +393,7 @@ export function PermissionTree({
                                   }
                                 }}
                                 onCheckedChange={(checked) => handleFeatureToggle(feature.id, checked === true, submodule.id, module.id)}
-                                disabled={readOnly || (feature.hasAccess && feature.isExplicit === false && !selectedFeatures.has(feature.id))}
+                                disabled={readOnly}
                                 className="mr-2"
                               />
                               <label className="flex-1 text-sm cursor-pointer flex items-center gap-2">
@@ -389,7 +442,7 @@ export function PermissionTree({
                                   }
                                 }}
                                 onCheckedChange={(checked) => handleFeatureToggle(feature.id, checked === true, submodule.id, module.id)}
-                                disabled={readOnly || (feature.hasAccess && feature.isExplicit === false && !selectedFeatures.has(feature.id))}
+                                disabled={readOnly}
                                 className="mr-2"
                               />
                               <label
@@ -435,7 +488,7 @@ export function PermissionTree({
                                         // Prevent event propagation
                                         e.stopPropagation();
                                       }}
-                                      disabled={readOnly || (operation.hasAccess && operation.isExplicit === false && !selectedOperations.get(feature.id)?.has(operation.id))}
+                                      disabled={readOnly}
                                       className="mr-2"
                                     />
                                     <label className="flex-1 text-xs cursor-pointer flex items-center gap-2">

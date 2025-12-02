@@ -200,9 +200,9 @@ export function useUserEffectivePermissionsTree(userId: string) {
     queryFn: () => permissionsV2Service.getUserEffectivePermissions(userId),
     enabled: !!userId,
     refetchOnWindowFocus: false,
-    refetchOnMount: false, // Don't refetch on mount if data exists
+    refetchOnMount: true, // Always refetch on mount to ensure fresh data
     refetchOnReconnect: false,
-    staleTime: 60000, // Consider data fresh for 60 seconds
+    staleTime: 0, // Always consider data stale - refetch when needed
     gcTime: 300000, // Keep in cache for 5 minutes
     retry: (failureCount, error: any) => {
       // Don't retry on 401 errors (authentication errors)

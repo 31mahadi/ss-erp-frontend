@@ -56,36 +56,51 @@ class ApiClient {
 
     const now = Date.now();
     const timeUntilExpiry = this.tokenExpiryTime - now;
-    // Refresh 1 minute before expiration (or 5 minutes if token expires in less than 1 minute)
-    const refreshTime = Math.max(60000, Math.min(timeUntilExpiry - 60000, 5 * 60000));
-
-    if (refreshTime > 0) {
-      this.refreshTimer = setTimeout(() => {
-        logger.info("Proactively refreshing token before expiration");
-        this.refreshAccessToken().catch((error) => {
-          // Only log network errors as debug, not as warnings
-          const isNetworkError = error instanceof TypeError && 
-            (error.message.includes('Failed to fetch') || 
-             error.message.includes('NetworkError') ||
-             error.message.includes('Network request failed') ||
-             error.message.includes('Load failed'));
-          
-          const errorContext = {
-            error: error instanceof Error ? {
-              message: error.message,
-              stack: error.stack,
-              name: error.name,
-            } : String(error),
-          };
-          
-          if (isNetworkError) {
-            logger.debug("Proactive token refresh failed - network error (may be temporary)", errorContext);
-          } else {
-            logger.warn("Proactive token refresh failed", errorContext);
-          }
+    
+    // If token already expired or expires in less than 30 seconds, refresh immediately
+    if (timeUntilExpiry <= 30000) {
+      logger.info("Token expired or expiring very soon, refreshing immediately");
+      this.refreshAccessToken().catch((error) => {
+        logger.debug("Immediate token refresh failed", {
+          error: error instanceof Error ? error.message : String(error),
         });
-      }, refreshTime);
+      });
+      return;
     }
+    
+    // Refresh 2 minutes before expiration to give plenty of buffer
+    const refreshTime = Math.max(30000, timeUntilExpiry - 2 * 60000);
+
+    logger.debug("Scheduling proactive token refresh", {
+      timeUntilExpiry: `${Math.round(timeUntilExpiry / 1000)}s`,
+      refreshIn: `${Math.round(refreshTime / 1000)}s`,
+    });
+
+    this.refreshTimer = setTimeout(() => {
+      logger.info("Proactively refreshing token before expiration");
+      this.refreshAccessToken().catch((error) => {
+        // Only log network errors as debug, not as warnings
+        const isNetworkError = error instanceof TypeError && 
+          (error.message.includes('Failed to fetch') || 
+           error.message.includes('NetworkError') ||
+           error.message.includes('Network request failed') ||
+           error.message.includes('Load failed'));
+        
+        const errorContext = {
+          error: error instanceof Error ? {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+          } : String(error),
+        };
+        
+        if (isNetworkError) {
+          logger.debug("Proactive token refresh failed - network error (may be temporary)", errorContext);
+        } else {
+          logger.warn("Proactive token refresh failed", errorContext);
+        }
+      });
+    }, refreshTime);
   }
 
   /**
@@ -102,15 +117,23 @@ class ApiClient {
    * Start proactive refresh mechanism
    */
   private startProactiveRefresh(): void {
-    // Check token expiry every 30 seconds
+    // Check token expiry every 15 seconds for more responsive refresh
     setInterval(() => {
       if (this.tokenExpiryTime && this.accessToken) {
         const now = Date.now();
         const timeUntilExpiry = this.tokenExpiryTime - now;
         
-        // If token expires in less than 5 minutes, refresh it proactively
+        // If token already expired, clear it (don't try to use expired tokens)
+        if (timeUntilExpiry <= 0) {
+          logger.warn("Token has expired, clearing and will refresh on next request");
+          // Don't clear the token here - let the 401 handler deal with it
+          // This avoids race conditions with in-flight requests
+          return;
+        }
+        
+        // If token expires in less than 3 minutes, refresh it proactively
         // This gives us a buffer to handle network delays and multiple refreshes
-        if (timeUntilExpiry > 0 && timeUntilExpiry < 5 * 60000) {
+        if (timeUntilExpiry < 3 * 60000) {
           // Only refresh if we're not already refreshing
           if (!this.refreshPromise) {
             logger.info("Token expiring soon, refreshing proactively", {
@@ -141,7 +164,7 @@ class ApiClient {
           }
         }
       }
-    }, 30000); // Check every 30 seconds
+    }, 15000); // Check every 15 seconds
   }
 
   /**

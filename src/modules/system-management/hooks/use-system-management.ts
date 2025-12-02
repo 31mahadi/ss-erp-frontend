@@ -356,6 +356,9 @@ export function useGrantRoleModuleAccess() {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["roles", variables.roleId, "module-access"] });
+      // Invalidate all user permissions (role change affects all users with this role)
+      queryClient.invalidateQueries({ queryKey: ["permissions-v2", "users"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["users"], exact: false });
       // Force refetch
       queryClient.refetchQueries({ 
         queryKey: ["roles", variables.roleId, "permissions", "tree"],
@@ -375,6 +378,9 @@ export function useRevokeRoleModuleAccess() {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["roles", variables.roleId, "module-access"] });
+      // Invalidate all user permissions (role change affects all users with this role)
+      queryClient.invalidateQueries({ queryKey: ["permissions-v2", "users"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["users"], exact: false });
       // Force refetch
       queryClient.refetchQueries({ 
         queryKey: ["roles", variables.roleId, "permissions", "tree"],
@@ -402,6 +408,9 @@ export function useGrantRoleSubmoduleAccess() {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["roles", variables.roleId, "submodule-access"] });
+      // Invalidate all user permissions (role change affects all users with this role)
+      queryClient.invalidateQueries({ queryKey: ["permissions-v2", "users"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["users"], exact: false });
       // Force refetch
       queryClient.refetchQueries({ 
         queryKey: ["roles", variables.roleId, "permissions", "tree"],
@@ -421,6 +430,9 @@ export function useRevokeRoleSubmoduleAccess() {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["roles", variables.roleId, "submodule-access"] });
+      // Invalidate all user permissions (role change affects all users with this role)
+      queryClient.invalidateQueries({ queryKey: ["permissions-v2", "users"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["users"], exact: false });
       // Force refetch
       queryClient.refetchQueries({ 
         queryKey: ["roles", variables.roleId, "permissions", "tree"],
@@ -448,6 +460,9 @@ export function useGrantRoleFeatureAccess() {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["roles", variables.roleId, "feature-access"] });
+      // Invalidate all user permissions (role change affects all users with this role)
+      queryClient.invalidateQueries({ queryKey: ["permissions-v2", "users"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["users"], exact: false });
       // Force refetch
       queryClient.refetchQueries({ 
         queryKey: ["roles", variables.roleId, "permissions", "tree"],
@@ -467,6 +482,9 @@ export function useRevokeRoleFeatureAccess() {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["roles", variables.roleId, "feature-access"] });
+      // Invalidate all user permissions (role change affects all users with this role)
+      queryClient.invalidateQueries({ queryKey: ["permissions-v2", "users"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["users"], exact: false });
       // Force refetch
       queryClient.refetchQueries({ 
         queryKey: ["roles", variables.roleId, "permissions", "tree"],
@@ -494,6 +512,9 @@ export function useGrantRoleFeatureOperationAccess() {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["roles", variables.roleId, "feature-operation-access"] });
+      // Invalidate all user permissions (role change affects all users with this role)
+      queryClient.invalidateQueries({ queryKey: ["permissions-v2", "users"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["users"], exact: false });
       // Force refetch
       queryClient.refetchQueries({ 
         queryKey: ["roles", variables.roleId, "permissions", "tree"],
@@ -513,6 +534,9 @@ export function useRevokeRoleFeatureOperationAccess() {
         exact: false,
       });
       queryClient.invalidateQueries({ queryKey: ["roles", variables.roleId, "feature-operation-access"] });
+      // Invalidate all user permissions (role change affects all users with this role)
+      queryClient.invalidateQueries({ queryKey: ["permissions-v2", "users"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["users"], exact: false });
       // Force refetch
       queryClient.refetchQueries({ 
         queryKey: ["roles", variables.roleId, "permissions", "tree"],

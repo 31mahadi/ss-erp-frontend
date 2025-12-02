@@ -64,16 +64,6 @@ export const API_ENDPOINTS = {
       update: (id: string) => `/admin/operations/${id}`,
       delete: (id: string) => `/admin/operations/${id}`,
     },
-    views: {
-      list: "/admin/views",
-      get: (id: string) => `/admin/views/${id}`,
-      create: "/admin/views",
-      update: (id: string) => `/admin/views/${id}`,
-      delete: (id: string) => `/admin/views/${id}`,
-      addPermission: (id: string) => `/admin/views/${id}/permissions`,
-      removePermission: (id: string, permissionSlug: string) =>
-        `/admin/views/${id}/permissions/${permissionSlug}`,
-    },
     roles: {
       list: "/admin/roles",
       get: (id: string) => `/admin/roles/${id}`,
@@ -100,11 +90,6 @@ export const API_ENDPOINTS = {
         grant: (id: string) => `/admin/roles/${id}/feature-operation-access`,
         revoke: (id: string, featureId: string, operationId: string) =>
           `/admin/roles/${id}/feature-operation-access/${featureId}/${operationId}`,
-      },
-      viewAccess: {
-        list: (id: string) => `/admin/roles/${id}/view-access`,
-        grant: (id: string) => `/admin/roles/${id}/view-access`,
-        revoke: (id: string, viewId: string) => `/admin/roles/${id}/view-access/${viewId}`,
       },
       permissions: {
         tree: (id: string) => `/admin/roles/${id}/permissions/tree`,

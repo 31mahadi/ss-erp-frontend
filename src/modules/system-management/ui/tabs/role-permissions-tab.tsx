@@ -58,11 +58,14 @@ export function RolePermissionsTab({ roleId: initialRoleId, onBack }: RolePermis
   const revokeFeatureOperationAccess = useRevokeRoleFeatureOperationAccess();
 
   // Build selected sets from permission tree
+  // Use hasDirectAccess (permission at this level) for checkbox state
+  // NOT hasAccess which includes inherited access from children
   const selectedModules = React.useMemo(() => {
     const set = new Set<string>();
     if (permissionTree) {
       permissionTree.forEach((module) => {
-        if (module.hasAccess === true) {
+        // Use hasDirectAccess if available, otherwise use isExplicit
+        if (module.hasDirectAccess === true || module.isExplicit === true) {
           set.add(module.id);
         }
       });
@@ -75,9 +78,8 @@ export function RolePermissionsTab({ roleId: initialRoleId, onBack }: RolePermis
     if (permissionTree) {
       permissionTree.forEach((module) => {
         module.submodules.forEach((submodule) => {
-          // For roles: include if it has access (all role permissions are toggleable)
-          // Explicit means directly granted (not inherited from parent)
-          if (submodule.hasAccess === true) {
+          // Use hasDirectAccess if available, otherwise use isExplicit
+          if (submodule.hasDirectAccess === true || submodule.isExplicit === true) {
             set.add(submodule.id);
           }
         });
@@ -92,9 +94,8 @@ export function RolePermissionsTab({ roleId: initialRoleId, onBack }: RolePermis
       permissionTree.forEach((module) => {
         module.submodules.forEach((submodule) => {
           submodule.features.forEach((feature) => {
-            // For roles: include if it has access (all role permissions are toggleable)
-            // Explicit means directly granted (not inherited from parent)
-            if (feature.hasAccess === true) {
+            // Use hasDirectAccess if available, otherwise use isExplicit
+            if (feature.hasDirectAccess === true || feature.isExplicit === true) {
               set.add(feature.id);
             }
           });
@@ -112,9 +113,8 @@ export function RolePermissionsTab({ roleId: initialRoleId, onBack }: RolePermis
           submodule.features.forEach((feature) => {
             const ops = new Set<string>();
             feature.operations.forEach((operation) => {
-              // For roles: include if it has access (all role permissions are toggleable)
-              // Explicit means directly granted (not inherited from parent)
-              if (operation.hasAccess === true) {
+              // Use hasDirectAccess if available, otherwise use isExplicit
+              if (operation.hasDirectAccess === true || operation.isExplicit === true) {
                 ops.add(operation.id);
               }
             });

@@ -109,8 +109,10 @@ export interface PermissionTreeOperation {
   name: string;
   slug: string;
   description?: string;
-  isDefault: boolean;
+  isDefault?: boolean;
+  featureId?: string;
   hasAccess?: boolean;
+  hasDirectAccess?: boolean; // Has access at this level (not from children)
   isExplicit?: boolean;
   isDenied?: boolean; // Explicitly denied even if role has it
 }
@@ -122,8 +124,10 @@ export interface PermissionTreeFeature {
   description?: string;
   route?: string;
   icon?: string;
-  order: number;
+  order?: number;
+  submoduleId?: string;
   hasAccess?: boolean;
+  hasDirectAccess?: boolean; // Has access at this level (not from children)
   isExplicit?: boolean;
   isDenied?: boolean; // Explicitly denied even if role has it
   operations: PermissionTreeOperation[];
@@ -135,8 +139,10 @@ export interface PermissionTreeSubmodule {
   slug: string;
   description?: string;
   icon?: string;
-  order: number;
+  order?: number;
+  moduleId?: string;
   hasAccess?: boolean;
+  hasDirectAccess?: boolean; // Has access at this level (not from children)
   isExplicit?: boolean;
   isDenied?: boolean; // Explicitly denied even if role has it
   features: PermissionTreeFeature[];
@@ -148,8 +154,11 @@ export interface PermissionTreeModule {
   slug: string;
   description?: string;
   icon?: string;
-  order: number;
+  order?: number;
   hasAccess?: boolean;
+  hasDirectAccess?: boolean; // Has access at this level (not from children)
+  isExplicit?: boolean;
+  isDenied?: boolean; // Explicitly denied even if role has it
   submodules: PermissionTreeSubmodule[];
 }
 

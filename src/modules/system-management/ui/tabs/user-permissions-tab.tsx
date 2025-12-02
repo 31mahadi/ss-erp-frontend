@@ -68,11 +68,13 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
   const permissionKeyBuilder = usePermissionKeyBuilder();
 
   // Build selected sets from permission tree
+  // Use hasDirectAccess (permission at this level) for checkbox state, not hasAccess (which includes children)
   const selectedModules = React.useMemo(() => {
     const set = new Set<string>();
     if (permissionTree) {
       permissionTree.forEach((module) => {
-        if (module.hasAccess === true) {
+        // Use hasDirectAccess if available, otherwise fall back to hasAccess for backward compatibility
+        if (module.hasDirectAccess === true) {
           set.add(module.id);
         }
       });
@@ -85,9 +87,8 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
     if (permissionTree) {
       permissionTree.forEach((module) => {
         module.submodules.forEach((submodule) => {
-          // Only include explicit (manual_add) permissions - atomic evaluation
-          // Role-based permissions are shown as checked but not in selected set (can't be revoked)
-          if (submodule.hasAccess === true && submodule.isExplicit === true) {
+          // Use hasDirectAccess if available
+          if (submodule.hasDirectAccess === true) {
             set.add(submodule.id);
           }
         });
@@ -102,9 +103,8 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
       permissionTree.forEach((module) => {
         module.submodules.forEach((submodule) => {
           submodule.features.forEach((feature) => {
-            // Only include explicit (manual_add) permissions - atomic evaluation
-            // Role-based permissions are shown as checked but not in selected set (can't be revoked)
-            if (feature.hasAccess === true && feature.isExplicit === true) {
+            // Use hasDirectAccess if available
+            if (feature.hasDirectAccess === true) {
               set.add(feature.id);
             }
           });
@@ -122,9 +122,8 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
           submodule.features.forEach((feature) => {
             const ops = new Set<string>();
             feature.operations.forEach((operation) => {
-              // Only include explicit operations - role-based operations should NOT be in selectedOperations
-              // This ensures that role-based operations show as checked but disabled (can't be unticked)
-              if (operation.hasAccess === true && operation.isExplicit === true) {
+              // Operations don't have children, so hasAccess is the same as hasDirectAccess
+              if (operation.hasAccess === true) {
                 ops.add(operation.id);
               }
             });
@@ -173,51 +172,32 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
         return; // Already processing
       }
 
-      // For modules, we need to grant/revoke at submodule level
-      const module = permissionTree?.find((m) => m.id === moduleId);
-      if (!module) {
-        toast.error("Module not found");
-        return;
-      }
-      if (!module.submodules || module.submodules.length === 0) {
-        toast.error("Module has no submodules");
-        return;
-      }
-
+      const permissionKey = permissionKeyBuilder.build(moduleId);
+      
       setOngoingMutations((prev) => new Set(prev).add(mutationKey));
 
       try {
-        // When unchecking, only remove explicit (manual_add) permissions
-        // Role-based permissions cannot be revoked via module toggle
-        const promises = module.submodules
-          .filter((submodule) => {
-            // If checking, include all submodules (will add manual_add)
-            // If unchecking, only include submodules that have explicit (manual_add) permissions
-            return checked || (submodule.isExplicit === true && submodule.hasAccess === true);
-          })
-          .map((submodule) => {
-            const permissionKey = permissionKeyBuilder.build(moduleId, submodule.id);
-            return checked
-              ? addManualPermission.mutateAsync({
-                  userId: selectedUserId,
-                  permissionKey,
-                  moduleId,
-                  submoduleId: submodule.id,
-                })
-              : removeManualPermission.mutateAsync({
-                  userId: selectedUserId,
-                  permissionKey,
-                }).catch((error) => {
-                  // Ignore 400/404 errors for non-existent permissions (idempotent)
-                  const errorMessage = getErrorMessage(error);
-                  if (errorMessage.includes('does not exist') || errorMessage.includes('404')) {
-                    return; // Permission doesn't exist, which is fine
-                  }
-                  throw error; // Re-throw other errors
-                });
+        // Backend handles hierarchical granting/revoking automatically
+        // Granting module will grant all children, revoking will revoke all children
+        if (checked) {
+          await addManualPermission.mutateAsync({
+            userId: selectedUserId,
+            permissionKey,
+            moduleId,
           });
-        await Promise.all(promises);
-        // Don't manually refetch - React Query will automatically refetch when mutations invalidate queries
+        } else {
+          await removeManualPermission.mutateAsync({
+            userId: selectedUserId,
+            permissionKey,
+          }).catch((error) => {
+            // Ignore 400/404 errors for non-existent permissions (idempotent)
+            const errorMessage = getErrorMessage(error);
+            if (errorMessage.includes('does not exist') || errorMessage.includes('404')) {
+              return; // Permission doesn't exist, which is fine
+            }
+            throw error; // Re-throw other errors
+          });
+        }
         toast.success(`Module ${checked ? "granted" : "revoked"} successfully`);
       } catch (error) {
         const errorMessage = getErrorMessage(error);
@@ -242,7 +222,7 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
         });
       }
     },
-    [selectedUserId, permissionTree, addManualPermission, removeManualPermission, permissionKeyBuilder, toast, ongoingMutations]
+    [selectedUserId, addManualPermission, removeManualPermission, permissionKeyBuilder, toast, ongoingMutations, getErrorMessage, createErrorForLogging, logger]
   );
 
   const handleSubmoduleToggle = React.useCallback(
@@ -258,23 +238,13 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
         return; // Already processing
       }
       
-      // Find the submodule in the permission tree to check if it's explicit
-      const submodule = permissionTree
-        ?.flatMap((m) => m.submodules)
-        .find((s) => s.id === submoduleId);
-      
-      // If trying to revoke and submodule is not explicit (manual_add), show error
-      // Atomic evaluation: only explicit (manual_add) permissions can be revoked
-      if (!checked && submodule && (!submodule.isExplicit || !submodule.hasAccess)) {
-        toast.error("Cannot revoke role-based submodule access. Only explicit (manual) permissions can be revoked.");
-        return;
-      }
-      
       const permissionKey = permissionKeyBuilder.build(moduleId, submoduleId);
       
       setOngoingMutations((prev) => new Set(prev).add(mutationKey));
 
       try {
+        // Backend handles hierarchical granting/revoking automatically
+        // Granting submodule will grant all children, revoking will revoke all children and auto-revoke parent if needed
         if (checked) {
           await addManualPermission.mutateAsync({
             userId: selectedUserId,
@@ -295,7 +265,6 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
             throw error; // Re-throw other errors
           });
         }
-        // Don't manually refetch - React Query will automatically refetch when mutations invalidate queries
         toast.success(`Submodule access ${checked ? "granted" : "revoked"}`);
       } catch (error) {
         const errorMessage = getErrorMessage(error);
@@ -321,7 +290,7 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
         });
       }
     },
-    [selectedUserId, permissionTree, addManualPermission, removeManualPermission, permissionKeyBuilder, toast, ongoingMutations]
+    [selectedUserId, addManualPermission, removeManualPermission, permissionKeyBuilder, toast, ongoingMutations, getErrorMessage, createErrorForLogging, logger]
   );
 
   const handleFeatureToggle = React.useCallback(
@@ -337,24 +306,13 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
         return; // Already processing
       }
       
-      // Find the feature in the permission tree to check if it's explicit
-      const feature = permissionTree
-        ?.flatMap((m) => m.submodules)
-        .flatMap((s) => s.features)
-        .find((f) => f.id === featureId);
-      
-      // If trying to revoke and feature is not explicit (manual_add), show error
-      // Atomic evaluation: only explicit (manual_add) permissions can be revoked
-      if (!checked && feature && (!feature.isExplicit || !feature.hasAccess)) {
-        toast.error("Cannot revoke role-based feature access. Only explicit (manual) permissions can be revoked.");
-        return;
-      }
-      
       const permissionKey = permissionKeyBuilder.build(moduleId, submoduleId, featureId);
       
       setOngoingMutations((prev) => new Set(prev).add(mutationKey));
 
       try {
+        // Backend handles hierarchical granting/revoking automatically
+        // Granting feature will grant all children (operations), revoking will revoke all children and auto-revoke parent if needed
         if (checked) {
           await addManualPermission.mutateAsync({
             userId: selectedUserId,
@@ -376,7 +334,6 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
             throw error; // Re-throw other errors
           });
         }
-        // Don't manually refetch - React Query will automatically refetch when mutations invalidate queries
         toast.success(`Feature access ${checked ? "granted" : "revoked"}`);
       } catch (error) {
         const errorMessage = getErrorMessage(error);
@@ -403,7 +360,7 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
         });
       }
     },
-    [selectedUserId, permissionTree, addManualPermission, removeManualPermission, permissionKeyBuilder, toast, ongoingMutations]
+    [selectedUserId, addManualPermission, removeManualPermission, permissionKeyBuilder, toast, ongoingMutations, getErrorMessage, createErrorForLogging, logger]
   );
 
   const handleOperationToggle = React.useCallback(
@@ -420,20 +377,6 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
         return; // Already processing
       }
       
-      // Find the operation in the permission tree to check if it's explicit
-      const operation = permissionTree
-        ?.flatMap((m) => m.submodules)
-        .flatMap((s) => s.features)
-        .find((f) => f.id === featureId)
-        ?.operations.find((op) => op.id === operationId);
-      
-      // If trying to revoke and operation is not explicit (manual_add), show error and return early
-      // Atomic evaluation: only explicit (manual_add) permissions can be revoked
-      if (!checked && operation && (!operation.isExplicit || !operation.hasAccess)) {
-        toast.error("Cannot revoke role-based operation access. Only explicit (manual) permissions can be revoked.");
-        return;
-      }
-      
       const permissionKey = permissionKeyBuilder.build(moduleId, submoduleId, featureId, operationId);
       
       // Set mutation state BEFORE async operations
@@ -444,6 +387,8 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
       });
 
       try {
+        // Backend handles hierarchical granting/revoking automatically
+        // Granting operation grants only that operation, revoking will auto-revoke parent if no children left
         if (checked) {
           await addManualPermission.mutateAsync({
             userId: selectedUserId,
@@ -454,19 +399,6 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
             operationId,
           });
         } else {
-          // Only try to remove if it's explicit
-          if (!operation?.isExplicit) {
-            // If not explicit, don't try to remove - it's role-based
-            logger.debug("Skipping removal of non-explicit operation permission", { operationId, permissionKey });
-            // Clear mutation state and return early
-            setOngoingMutations((prev) => {
-              const next = new Set(prev);
-              next.delete(mutationKey);
-              return next;
-            });
-            return;
-          }
-          
           await removeManualPermission.mutateAsync({
             userId: selectedUserId,
             permissionKey,
@@ -479,8 +411,6 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
             throw error; // Re-throw other errors
           });
         }
-        // Don't manually refetch - React Query will automatically refetch when mutations invalidate queries
-        // The mutations already have onSuccess callbacks that invalidate the queries
         toast.success(`Operation access ${checked ? "granted" : "revoked"}`);
       } catch (error) {
         const errorMessage = getErrorMessage(error);
@@ -509,7 +439,7 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
         });
       }
     },
-    [selectedUserId, permissionTree, addManualPermission, removeManualPermission, permissionKeyBuilder, toast, ongoingMutations, logger]
+    [selectedUserId, addManualPermission, removeManualPermission, permissionKeyBuilder, toast, ongoingMutations, logger, getErrorMessage, createErrorForLogging]
   );
 
   const treeModules: PermissionTreeModule[] = React.useMemo(() => {
