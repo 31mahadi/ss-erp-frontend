@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useCreateModule, useUpdateModule, useDeleteModule, useModule } from "../../hooks/use-system-management";
@@ -19,6 +19,7 @@ import { useCreateFeature, useUpdateFeature, useDeleteFeature, useFeatures } fro
 import { useCreateOperation, useUpdateOperation, useDeleteOperation, useOperations, useAddOperationToFeature } from "../../hooks/use-system-management";
 import { useToast } from "@/lib/hooks/use-toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { IconPicker, IconDisplay } from "@/components/ui/icon-picker";
 
 const moduleSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -334,6 +335,7 @@ function CreateModuleForm({ onSuccess, onCancel }: { onSuccess: () => void; onCa
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<ModuleFormData>({
     resolver: zodResolver(moduleSchema),
@@ -365,8 +367,18 @@ function CreateModuleForm({ onSuccess, onCancel }: { onSuccess: () => void; onCa
           <Textarea id="description" {...register("description")} placeholder="Optional description" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="icon">Icon</Label>
-          <Input id="icon" {...register("icon")} placeholder="e.g., 👥" />
+          <Label>Icon</Label>
+          <Controller
+            name="icon"
+            control={control}
+            render={({ field }) => (
+              <IconPicker
+                value={field.value || ""}
+                onChange={field.onChange}
+                placeholder="Select an icon"
+              />
+            )}
+          />
         </div>
       </div>
       <div className="flex justify-end gap-2 pt-4">
@@ -448,7 +460,7 @@ function StructureTree({
                 )}
                 {module.submodules.length === 0 && <div className="w-5" />}
                 <div className="flex items-center gap-2 flex-1">
-                  {module.icon && <span className="text-lg">{module.icon}</span>}
+                  {module.icon && <IconDisplay icon={module.icon} size={20} className="flex-shrink-0" />}
                   <span className="font-semibold text-base">{module.name}</span>
                   {module.description && (
                     <span className="text-xs text-muted-foreground font-normal">({module.description})</span>
@@ -510,7 +522,7 @@ function StructureTree({
                           )}
                           {submodule.features.length === 0 && <div className="w-5" />}
                           <div className="flex items-center gap-2 flex-1">
-                            {submodule.icon && <span>{submodule.icon}</span>}
+                            {submodule.icon && <IconDisplay icon={submodule.icon} size={16} className="flex-shrink-0" />}
                             <span className="font-medium text-sm">{submodule.name}</span>
                             {submodule.description && (
                               <span className="text-xs text-muted-foreground font-normal">({submodule.description})</span>
@@ -568,7 +580,7 @@ function StructureTree({
                                     )}
                                     {feature.operations.length === 0 && <div className="w-5" />}
                                     <div className="flex items-center gap-2 flex-1">
-                                      {feature.icon && <span>{feature.icon}</span>}
+                                      {feature.icon && <IconDisplay icon={feature.icon} size={14} className="flex-shrink-0" />}
                                       <span className="text-sm">{feature.name}</span>
                                       {feature.description && (
                                         <span className="text-xs text-muted-foreground font-normal">({feature.description})</span>
@@ -733,6 +745,11 @@ function EditDialog({
       : undefined,
   });
 
+  // Watch icon values for controlled IconPicker
+  const moduleIcon = moduleForm.watch("icon");
+  const submoduleIcon = submoduleForm.watch("icon");
+  const featureIcon = featureForm.watch("icon");
+
   const handleSubmit = async (data: any) => {
     try {
       if (type === "module") {
@@ -786,8 +803,12 @@ function EditDialog({
               <Textarea id="edit-description" {...moduleForm.register("description")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-icon">Icon</Label>
-              <Input id="edit-icon" {...moduleForm.register("icon")} />
+              <Label>Icon</Label>
+              <IconPicker
+                value={moduleIcon || ""}
+                onChange={(value) => moduleForm.setValue("icon", value)}
+                placeholder="Select an icon"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-order">Order</Label>
@@ -828,8 +849,12 @@ function EditDialog({
               <Textarea id="edit-description" {...submoduleForm.register("description")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-icon">Icon</Label>
-              <Input id="edit-icon" {...submoduleForm.register("icon")} />
+              <Label>Icon</Label>
+              <IconPicker
+                value={submoduleIcon || ""}
+                onChange={(value) => submoduleForm.setValue("icon", value)}
+                placeholder="Select an icon"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-sortOrder">Sort Order</Label>
@@ -874,8 +899,12 @@ function EditDialog({
               <Input id="edit-route" {...featureForm.register("route")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-icon">Icon</Label>
-              <Input id="edit-icon" {...featureForm.register("icon")} />
+              <Label>Icon</Label>
+              <IconPicker
+                value={featureIcon || ""}
+                onChange={(value) => featureForm.setValue("icon", value)}
+                placeholder="Select an icon"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-sortOrder">Sort Order</Label>
@@ -952,6 +981,7 @@ function CreateSubmoduleForm({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<SubmoduleFormData>({
     resolver: zodResolver(submoduleSchema),
@@ -986,8 +1016,18 @@ function CreateSubmoduleForm({
           <Textarea id="description" {...register("description")} placeholder="Optional description" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="icon">Icon</Label>
-          <Input id="icon" {...register("icon")} placeholder="e.g., 👤" />
+          <Label>Icon</Label>
+          <Controller
+            name="icon"
+            control={control}
+            render={({ field }) => (
+              <IconPicker
+                value={field.value || ""}
+                onChange={field.onChange}
+                placeholder="Select an icon"
+              />
+            )}
+          />
         </div>
       </div>
       <div className="flex justify-end gap-2 pt-4">
@@ -1016,6 +1056,7 @@ function CreateFeatureForm({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<FeatureFormData>({
     resolver: zodResolver(featureSchema),
@@ -1054,8 +1095,18 @@ function CreateFeatureForm({
           <Input id="route" {...register("route")} placeholder="e.g., /users/profile" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="icon">Icon</Label>
-          <Input id="icon" {...register("icon")} placeholder="e.g., 📄" />
+          <Label>Icon</Label>
+          <Controller
+            name="icon"
+            control={control}
+            render={({ field }) => (
+              <IconPicker
+                value={field.value || ""}
+                onChange={field.onChange}
+                placeholder="Select an icon"
+              />
+            )}
+          />
         </div>
       </div>
       <div className="flex justify-end gap-2 pt-4">
