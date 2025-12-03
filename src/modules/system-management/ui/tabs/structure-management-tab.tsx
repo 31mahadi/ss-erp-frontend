@@ -17,7 +17,7 @@ import { useCreateModule, useUpdateModule, useDeleteModule, useModule } from "..
 import { useCreateSubmodule, useUpdateSubmodule, useDeleteSubmodule, useSubmodules } from "../../hooks/use-system-management";
 import { useCreateFeature, useUpdateFeature, useDeleteFeature, useFeatures } from "../../hooks/use-system-management";
 import { useCreateOperation, useUpdateOperation, useDeleteOperation, useOperations, useAddOperationToFeature } from "../../hooks/use-system-management";
-import { useToast } from "@/lib/hooks/use-toast";
+import { useToast, useLocalStorageSet, createStorageKey } from "@/lib/hooks";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { IconPicker, IconDisplay } from "@/components/ui/icon-picker";
 
@@ -404,52 +404,65 @@ function StructureTree({
   onDelete: (type: "module" | "submodule" | "feature" | "operation", id: string) => void;
   onCreate: (type: "submodule" | "feature" | "operation", parentId: string) => void;
 }) {
-  const [expandedModules, setExpandedModules] = React.useState<Set<string>>(new Set());
-  const [expandedSubmodules, setExpandedSubmodules] = React.useState<Set<string>>(new Set());
-  const [expandedFeatures, setExpandedFeatures] = React.useState<Set<string>>(new Set());
+  // Persist expanded states in localStorage (survives refresh)
+  const [expandedModules, setExpandedModules] = useLocalStorageSet<string>(
+    createStorageKey("system-management", "structure", "expanded-modules")
+  );
+  const [expandedSubmodules, setExpandedSubmodules] = useLocalStorageSet<string>(
+    createStorageKey("system-management", "structure", "expanded-submodules")
+  );
+  const [expandedFeatures, setExpandedFeatures] = useLocalStorageSet<string>(
+    createStorageKey("system-management", "structure", "expanded-features")
+  );
 
   const toggleModule = (moduleId: string) => {
-    const newExpanded = new Set(expandedModules);
-    if (newExpanded.has(moduleId)) {
-      newExpanded.delete(moduleId);
-    } else {
-      newExpanded.add(moduleId);
-    }
-    setExpandedModules(newExpanded);
+    setExpandedModules((prev) => {
+      const next = new Set(prev);
+      if (next.has(moduleId)) {
+        next.delete(moduleId);
+      } else {
+        next.add(moduleId);
+      }
+      return next;
+    });
   };
 
   const toggleSubmodule = (submoduleId: string) => {
-    const newExpanded = new Set(expandedSubmodules);
-    if (newExpanded.has(submoduleId)) {
-      newExpanded.delete(submoduleId);
-    } else {
-      newExpanded.add(submoduleId);
-    }
-    setExpandedSubmodules(newExpanded);
+    setExpandedSubmodules((prev) => {
+      const next = new Set(prev);
+      if (next.has(submoduleId)) {
+        next.delete(submoduleId);
+      } else {
+        next.add(submoduleId);
+      }
+      return next;
+    });
   };
 
   const toggleFeature = (featureId: string) => {
-    const newExpanded = new Set(expandedFeatures);
-    if (newExpanded.has(featureId)) {
-      newExpanded.delete(featureId);
-    } else {
-      newExpanded.add(featureId);
-    }
-    setExpandedFeatures(newExpanded);
+    setExpandedFeatures((prev) => {
+      const next = new Set(prev);
+      if (next.has(featureId)) {
+        next.delete(featureId);
+      } else {
+        next.add(featureId);
+      }
+      return next;
+    });
   };
 
   return (
-    <div className="space-y-1 border rounded-lg p-4 bg-card">
+    <div className="space-y-1 border rounded-lg p-4 bg-card shadow-sm">
       {modules.map((module) => {
         const isExpanded = expandedModules.has(module.id);
         return (
           <div key={module.id} className="space-y-1">
-            <div className="flex items-center justify-between py-2 px-2 rounded-md hover:bg-accent/50 transition-colors group">
-              <div className="flex items-center gap-2 flex-1">
-                {module.submodules.length > 0 && (
+            <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-accent/50 transition-all duration-150 group">
+              <div className="flex items-center gap-2.5 flex-1">
+                {module.submodules.length > 0 ? (
                   <button
                     onClick={() => toggleModule(module.id)}
-                    className="flex items-center justify-center w-5 h-5 hover:bg-accent rounded transition-colors"
+                    className="flex items-center justify-center w-6 h-6 hover:bg-accent rounded-md transition-colors"
                   >
                     {isExpanded ? (
                       <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -457,28 +470,30 @@ function StructureTree({
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     )}
                   </button>
+                ) : (
+                  <div className="w-6" />
                 )}
-                {module.submodules.length === 0 && <div className="w-5" />}
-                <div className="flex items-center gap-2 flex-1">
+                <div className="flex items-center gap-2.5 flex-1">
                   {module.icon && <IconDisplay icon={module.icon} size={20} className="flex-shrink-0" />}
                   <span className="font-semibold text-base">{module.name}</span>
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Module</span>
                   {module.description && (
                     <span className="text-xs text-muted-foreground font-normal">({module.description})</span>
                   )}
-                  <span className="text-xs text-muted-foreground">• {module.slug}</span>
+                  <span className="text-xs text-muted-foreground font-mono">• {module.slug}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 {module.slug !== 'system-management' && (
                   <>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => onCreate("submodule", module.id)}
-                      className="h-7 w-7 p-0"
+                      className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary"
                       title="Add Submodule"
                     >
-                      <Plus className="h-3 w-3" />
+                      <Plus className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -486,32 +501,32 @@ function StructureTree({
                       onClick={() => onEdit("module", module.id)}
                       className="h-7 w-7 p-0"
                     >
-                      <Edit className="h-3 w-3" />
+                      <Edit className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => onDelete("module", module.id)}
-                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                      className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </>
                 )}
               </div>
             </div>
             {isExpanded && (
-              <div className="ml-8 space-y-1 mt-1">
+              <div className="ml-8 space-y-1 mt-1 border-l-2 border-border/50 pl-4">
                 {module.submodules.map((submodule: any) => {
                   const isSubExpanded = expandedSubmodules.has(submodule.id);
                   return (
                     <div key={submodule.id} className="space-y-1">
-                      <div className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-accent/30 transition-colors group">
-                        <div className="flex items-center gap-2 flex-1">
-                          {submodule.features.length > 0 && (
+                      <div className="flex items-center justify-between py-1.5 px-3 rounded-lg hover:bg-accent/40 transition-all duration-150 group">
+                        <div className="flex items-center gap-2.5 flex-1">
+                          {submodule.features.length > 0 ? (
                             <button
                               onClick={() => toggleSubmodule(submodule.id)}
-                              className="flex items-center justify-center w-5 h-5 hover:bg-accent rounded transition-colors"
+                              className="flex items-center justify-center w-6 h-6 hover:bg-accent rounded-md transition-colors"
                             >
                               {isSubExpanded ? (
                                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -519,26 +534,28 @@ function StructureTree({
                                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
                               )}
                             </button>
+                          ) : (
+                            <div className="w-6" />
                           )}
-                          {submodule.features.length === 0 && <div className="w-5" />}
-                          <div className="flex items-center gap-2 flex-1">
-                            {submodule.icon && <IconDisplay icon={submodule.icon} size={16} className="flex-shrink-0" />}
+                          <div className="flex items-center gap-2.5 flex-1">
+                            {submodule.icon && <IconDisplay icon={submodule.icon} size={18} className="flex-shrink-0" />}
                             <span className="font-medium text-sm">{submodule.name}</span>
+                            <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full font-medium">Submodule</span>
                             {submodule.description && (
                               <span className="text-xs text-muted-foreground font-normal">({submodule.description})</span>
                             )}
-                            <span className="text-xs text-muted-foreground">• {submodule.slug}</span>
+                            <span className="text-xs text-muted-foreground font-mono">• {submodule.slug}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => onCreate("feature", submodule.id)}
-                            className="h-7 w-7 p-0"
+                            className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary"
                             title="Add Feature"
                           >
-                            <Plus className="h-3 w-3" />
+                            <Plus className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -546,30 +563,30 @@ function StructureTree({
                             onClick={() => onEdit("submodule", submodule.id, module.id)}
                             className="h-7 w-7 p-0"
                           >
-                            <Edit className="h-3 w-3" />
+                            <Edit className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => onDelete("submodule", submodule.id)}
-                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                            className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </div>
                       {isSubExpanded && (
-                        <div className="ml-8 space-y-1 mt-1">
+                        <div className="ml-8 space-y-1 mt-1 border-l-2 border-border/50 pl-4">
                           {submodule.features.map((feature: any) => {
                             const isFeatExpanded = expandedFeatures.has(feature.id);
                             return (
                               <div key={feature.id} className="space-y-1">
-                                <div className="flex items-center justify-between py-1 px-2 rounded-md hover:bg-accent/20 transition-colors group">
-                                  <div className="flex items-center gap-2 flex-1">
-                                    {feature.operations.length > 0 && (
+                                <div className="flex items-center justify-between py-1.5 px-3 rounded-lg hover:bg-accent/30 transition-all duration-150 group">
+                                  <div className="flex items-center gap-2.5 flex-1">
+                                    {feature.operations.length > 0 ? (
                                       <button
                                         onClick={() => toggleFeature(feature.id)}
-                                        className="flex items-center justify-center w-5 h-5 hover:bg-accent rounded transition-colors"
+                                        className="flex items-center justify-center w-6 h-6 hover:bg-accent rounded-md transition-colors"
                                       >
                                         {isFeatExpanded ? (
                                           <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -577,26 +594,28 @@ function StructureTree({
                                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                                         )}
                                       </button>
+                                    ) : (
+                                      <div className="w-6" />
                                     )}
-                                    {feature.operations.length === 0 && <div className="w-5" />}
-                                    <div className="flex items-center gap-2 flex-1">
-                                      {feature.icon && <IconDisplay icon={feature.icon} size={14} className="flex-shrink-0" />}
-                                      <span className="text-sm">{feature.name}</span>
+                                    <div className="flex items-center gap-2.5 flex-1">
+                                      {feature.icon && <IconDisplay icon={feature.icon} size={16} className="flex-shrink-0" />}
+                                      <span className="text-sm font-medium">{feature.name}</span>
+                                      <span className="text-xs bg-accent text-accent-foreground px-2 py-0.5 rounded-full font-medium">Feature</span>
                                       {feature.description && (
                                         <span className="text-xs text-muted-foreground font-normal">({feature.description})</span>
                                       )}
-                                      <span className="text-xs text-muted-foreground">• {feature.slug}</span>
+                                      <span className="text-xs text-muted-foreground font-mono">• {feature.slug}</span>
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => onCreate("operation", feature.id)}
-                                      className="h-7 w-7 p-0"
+                                      className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary"
                                       title="Add Operation"
                                     >
-                                      <Plus className="h-3 w-3" />
+                                      <Plus className="h-3.5 w-3.5" />
                                     </Button>
                                     <Button
                                       variant="ghost"
@@ -604,50 +623,60 @@ function StructureTree({
                                       onClick={() => onEdit("feature", feature.id, submodule.id)}
                                       className="h-7 w-7 p-0"
                                     >
-                                      <Edit className="h-3 w-3" />
+                                      <Edit className="h-3.5 w-3.5" />
                                     </Button>
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => onDelete("feature", feature.id)}
-                                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                      className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                                     >
-                                      <Trash2 className="h-3 w-3" />
+                                      <Trash2 className="h-3.5 w-3.5" />
                                     </Button>
                                   </div>
                                 </div>
                                 {isFeatExpanded && (
-                                  <div className="ml-8 space-y-1 mt-1">
+                                  <div className="ml-8 space-y-1 mt-1 border-l-2 border-border/50 pl-4">
                                     {feature.operations.map((operation: any) => (
                                       <div
                                         key={operation.id}
-                                        className="flex items-center justify-between py-0.5 px-2 rounded-md hover:bg-accent/10 transition-colors group"
+                                        className="flex items-center justify-between py-1.5 px-3 rounded-lg hover:bg-accent/30 transition-all duration-150 group"
                                       >
-                                        <div className="flex items-center gap-2 flex-1">
-                                          <span className="text-xs text-muted-foreground">{operation.name}</span>
-                                          <span className="text-xs text-muted-foreground">• {operation.slug}</span>
-                                          {operation.isDefault && (
-                                            <span className="text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded">
-                                              Default
-                                            </span>
-                                          )}
+                                        <div className="flex items-center gap-2.5 flex-1">
+                                          {/* Dot indicator for operations */}
+                                          <div className="w-6 flex items-center justify-center flex-shrink-0">
+                                            <div className="h-2 w-2 rounded-full bg-muted-foreground/30" />
+                                          </div>
+                                          <div className="flex items-center gap-2.5 flex-1">
+                                            <span className="text-sm font-medium">{operation.name}</span>
+                                            <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-medium">Operation</span>
+                                            {operation.isDefault && (
+                                              <span className="text-xs bg-success/10 text-success px-2 py-0.5 rounded-full font-medium">
+                                                Default
+                                              </span>
+                                            )}
+                                            {operation.description && (
+                                              <span className="text-xs text-muted-foreground font-normal">({operation.description})</span>
+                                            )}
+                                            <span className="text-xs text-muted-foreground font-mono">• {operation.slug}</span>
+                                          </div>
                                         </div>
-                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                           <Button
                                             variant="ghost"
                                             size="sm"
                                             onClick={() => onEdit("operation", operation.id, feature.id)}
-                                            className="h-6 w-6 p-0"
+                                            className="h-7 w-7 p-0"
                                           >
-                                            <Edit className="h-3 w-3" />
+                                            <Edit className="h-3.5 w-3.5" />
                                           </Button>
                                           <Button
                                             variant="ghost"
                                             size="sm"
                                             onClick={() => onDelete("operation", operation.id)}
-                                            className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                            className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                                           >
-                                            <Trash2 className="h-3 w-3" />
+                                            <Trash2 className="h-3.5 w-3.5" />
                                           </Button>
                                         </div>
                                       </div>
@@ -670,6 +699,14 @@ function StructureTree({
     </div>
   );
 }
+
+// Tree node type colors for consistency
+const nodeTypeColors = {
+  module: "bg-primary/10 text-primary",
+  submodule: "bg-secondary text-secondary-foreground",
+  feature: "bg-accent text-accent-foreground",
+  operation: "bg-muted text-muted-foreground",
+} as const;
 
 function EditDialog({
   type,

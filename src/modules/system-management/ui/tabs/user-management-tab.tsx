@@ -13,12 +13,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { createUserSchema, type CreateUserInput } from "../../domain/user-schema";
 import { useCreateUser } from "../../hooks/use-users";
 import { useRoles } from "../../hooks/use-system-management";
-import { useToast } from "@/lib/hooks/use-toast";
+import { useToast, useUrlState } from "@/lib/hooks";
 import { UsersTab } from "./users-tab";
 import { UserPermissionsTab } from "./user-permissions-tab";
 
 export function UserManagementTab() {
-  const [selectedUserId, setSelectedUserId] = React.useState<string | null>(null);
+  // Persist selected user in URL (so it survives refresh)
+  const [selectedUserId, setSelectedUserId] = useUrlState<string>("userId", null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
   const [createRoleIds, setCreateRoleIds] = React.useState<string[]>([]);
   const createUser = useCreateUser();
@@ -32,6 +33,9 @@ export function UserManagementTab() {
     formState: { errors },
   } = useForm<CreateUserInput>({
     resolver: zodResolver(createUserSchema),
+    defaultValues: {
+      password: "SuperAdmin@123",
+    },
   });
 
   const onSubmit = async (data: CreateUserInput) => {

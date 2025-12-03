@@ -17,6 +17,20 @@ interface PermissionTreeProps {
   onFeatureToggle: (featureId: string, checked: boolean, submoduleId: string, moduleId: string) => void;
   onOperationToggle: (featureId: string, operationId: string, checked: boolean, submoduleId: string, moduleId: string) => void;
   readOnly?: boolean;
+  /**
+   * Optional controlled expanded states. If not provided, uses internal state.
+   * Use this with localStorage hooks for persistence.
+   */
+  expandedModules?: Set<string>;
+  expandedSubmodules?: Set<string>;
+  expandedFeatures?: Set<string>;
+  onExpandedModulesChange?: (expanded: Set<string>) => void;
+  onExpandedSubmodulesChange?: (expanded: Set<string>) => void;
+  onExpandedFeaturesChange?: (expanded: Set<string>) => void;
+  /**
+   * Storage key prefix for auto-persistence. If provided, will use localStorage automatically.
+   */
+  storageKeyPrefix?: string;
 }
 
 export function PermissionTree({
@@ -30,10 +44,22 @@ export function PermissionTree({
   onFeatureToggle,
   onOperationToggle,
   readOnly = false,
+  expandedModules: controlledExpandedModules,
+  expandedSubmodules: controlledExpandedSubmodules,
+  expandedFeatures: controlledExpandedFeatures,
+  onExpandedModulesChange,
+  onExpandedSubmodulesChange,
+  onExpandedFeaturesChange,
+  storageKeyPrefix,
 }: PermissionTreeProps) {
-  const [expandedModules, setExpandedModules] = React.useState<Set<string>>(new Set());
-  const [expandedSubmodules, setExpandedSubmodules] = React.useState<Set<string>>(new Set());
-  const [expandedFeatures, setExpandedFeatures] = React.useState<Set<string>>(new Set());
+  // Use controlled state if provided, otherwise use internal state
+  const [internalExpandedModules, setInternalExpandedModules] = React.useState<Set<string>>(new Set());
+  const [internalExpandedSubmodules, setInternalExpandedSubmodules] = React.useState<Set<string>>(new Set());
+  const [internalExpandedFeatures, setInternalExpandedFeatures] = React.useState<Set<string>>(new Set());
+
+  const expandedModules = controlledExpandedModules ?? internalExpandedModules;
+  const expandedSubmodules = controlledExpandedSubmodules ?? internalExpandedSubmodules;
+  const expandedFeatures = controlledExpandedFeatures ?? internalExpandedFeatures;
 
   const toggleModule = (moduleId: string) => {
     const newExpanded = new Set(expandedModules);
@@ -42,7 +68,12 @@ export function PermissionTree({
     } else {
       newExpanded.add(moduleId);
     }
-    setExpandedModules(newExpanded);
+    
+    if (onExpandedModulesChange) {
+      onExpandedModulesChange(newExpanded);
+    } else {
+      setInternalExpandedModules(newExpanded);
+    }
   };
 
   const toggleSubmodule = (submoduleId: string) => {
@@ -52,7 +83,12 @@ export function PermissionTree({
     } else {
       newExpanded.add(submoduleId);
     }
-    setExpandedSubmodules(newExpanded);
+    
+    if (onExpandedSubmodulesChange) {
+      onExpandedSubmodulesChange(newExpanded);
+    } else {
+      setInternalExpandedSubmodules(newExpanded);
+    }
   };
 
   const toggleFeature = (featureId: string) => {
@@ -62,7 +98,12 @@ export function PermissionTree({
     } else {
       newExpanded.add(featureId);
     }
-    setExpandedFeatures(newExpanded);
+    
+    if (onExpandedFeaturesChange) {
+      onExpandedFeaturesChange(newExpanded);
+    } else {
+      setInternalExpandedFeatures(newExpanded);
+    }
   };
 
   const handleModuleToggle = (moduleId: string, checked: boolean) => {

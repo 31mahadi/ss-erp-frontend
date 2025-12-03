@@ -5,183 +5,17 @@ import { useAuthStore } from "@/lib/auth/auth-store";
 import { cn } from "@/lib/utils/cn";
 import {
   ChevronDown,
-  ChevronRight,
-  ChevronLeft,
   LayoutDashboard,
-  LogOut,
-  User,
-  Mail,
-  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
-import { createPortal } from "react-dom";
-import { Button } from "../ui/button";
 import { useSidebar } from "./sidebar-context";
+import { SidebarHeader, SidebarUserProfile, HoverPopover, type NavItem } from "./sidebar/index";
+import { useLocalStorageSet, createStorageKey } from "@/lib/hooks";
 
 interface SidebarProps {
   className?: string;
-}
-
-interface NavItem {
-  id: string;
-  label: string;
-  href?: string;
-  icon?: string;
-  children?: NavItem[];
-  type: "module" | "submodule" | "feature";
-}
-
-// Hover Popover Component for Closed State
-function HoverPopover({
-  item,
-  children,
-  isActive,
-}: {
-  item: NavItem;
-  children: React.ReactNode;
-  isActive: boolean;
-}) {
-  const [isHovered, setIsHovered] = React.useState(false);
-  const timeoutRef = React.useRef<number | undefined>(undefined);
-
-  const handleMouseEnter = () => {
-    if (timeoutRef.current !== undefined) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = undefined;
-    }
-    setIsHovered(true);
-  };
-
-  const handleMouseLeave = () => {
-    timeoutRef.current = window.setTimeout(() => {
-      setIsHovered(false);
-    }, 100);
-  };
-
-  React.useEffect(() => {
-    return () => {
-      if (timeoutRef.current !== undefined) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-
-  if (!item.children || item.children.length === 0) {
-    return <>{children}</>;
-  }
-
-  return (
-    <div
-      className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      {children}
-      {isHovered && (
-        <div 
-          className="absolute left-full top-0 ml-2 z-[9999] min-w-[200px] bg-popover border rounded-lg shadow-lg p-2"
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-        >
-          <div className="space-y-0.5">
-            {item.children.map((child) => {
-              if (child.href) {
-                return (
-                  <Link
-                    key={child.id}
-                    href={child.href}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors",
-                      "hover:bg-accent/50",
-                      isActive && "bg-accent/30 font-medium"
-                    )}
-                  >
-                    {child.icon && <span className="text-base">{child.icon}</span>}
-                    <span>{child.label}</span>
-                  </Link>
-                );
-              }
-              return (
-                <NestedPopover key={child.id} item={child} />
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function NestedPopover({ item }: { item: NavItem }) {
-  const [isHovered, setIsHovered] = React.useState(false);
-  const timeoutRef = React.useRef<number | undefined>(undefined);
-
-  const handleMouseEnter = () => {
-    if (timeoutRef.current !== undefined) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = undefined;
-    }
-    setIsHovered(true);
-  };
-
-  const handleMouseLeave = () => {
-    timeoutRef.current = window.setTimeout(() => {
-      setIsHovered(false);
-    }, 100);
-  };
-
-  React.useEffect(() => {
-    return () => {
-      if (timeoutRef.current !== undefined) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-
-  return (
-    <div
-      className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm cursor-pointer hover:bg-accent/50 transition-colors">
-        {item.icon && <span className="text-base">{item.icon}</span>}
-        <span className="flex-1">{item.label}</span>
-        {item.children && item.children.length > 0 && (
-          <ChevronRight className="h-4 w-4" />
-        )}
-      </div>
-      {isHovered && item.children && item.children.length > 0 && (
-        <div 
-          className="absolute left-full top-0 ml-2 z-[9999] min-w-[200px] bg-popover border rounded-lg shadow-lg p-2"
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-        >
-          <div className="space-y-0.5">
-            {item.children.map((child) => {
-              if (child.href) {
-                return (
-                  <Link
-                    key={child.id}
-                    href={child.href}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors hover:bg-accent/50"
-                  >
-                    {child.icon && <span className="text-base">{child.icon}</span>}
-                    <span>{child.label}</span>
-                  </Link>
-                );
-              }
-              return (
-                <NestedPopover key={child.id} item={child} />
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 export function Sidebar({ className }: SidebarProps) {
@@ -189,22 +23,59 @@ export function Sidebar({ className }: SidebarProps) {
   const router = useRouter();
   const access = useAccessStore((state) => state.access);
   const { user, logout } = useAuthStore();
-  const { isOpen, setIsOpen } = useSidebar();
-  const [expandedItems, setExpandedItems] = React.useState<Set<string>>(
-    new Set()
+  const { isOpen, setIsOpen, toggle } = useSidebar();
+  
+  // Persist sidebar expanded items in localStorage (survives refresh)
+  const [expandedItems, setExpandedItems] = useLocalStorageSet<string>(
+    createStorageKey("sidebar", "expanded-items")
   );
-  const [profileMenuOpen, setProfileMenuOpen] = React.useState(false);
-  const [mounted, setMounted] = React.useState(false);
-  const profileButtonRef = React.useRef<HTMLButtonElement>(null);
-  const [popoverPosition, setPopoverPosition] = React.useState({ top: 0, left: 0 });
-
+  
+  // Scroll indicator state
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const [showScrollIndicator, setShowScrollIndicator] = React.useState(false);
+  
+  // Check scroll position
+  const checkScrollPosition = React.useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container || !isOpen) {
+      setShowScrollIndicator(false);
+      return;
+    }
+    
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const isScrollable = scrollHeight > clientHeight;
+    const isNotAtBottom = scrollTop + clientHeight < scrollHeight - 10; // 10px threshold
+    
+    setShowScrollIndicator(isScrollable && isNotAtBottom);
+  }, [isOpen]);
+  
+  // Monitor scroll events
   React.useEffect(() => {
-    setMounted(true);
-  }, []);
+    const container = scrollContainerRef.current;
+    if (!container || !isOpen) {
+      setShowScrollIndicator(false);
+      return;
+    }
+    
+    checkScrollPosition();
+    container.addEventListener('scroll', checkScrollPosition);
+    
+    // Also check when content changes (e.g., items expand/collapse)
+    const resizeObserver = new ResizeObserver(checkScrollPosition);
+    resizeObserver.observe(container);
+    
+    // Check on window resize
+    window.addEventListener('resize', checkScrollPosition);
+    
+    return () => {
+      container.removeEventListener('scroll', checkScrollPosition);
+      window.removeEventListener('resize', checkScrollPosition);
+      resizeObserver.disconnect();
+    };
+  }, [checkScrollPosition, isOpen]);
 
   const modules = React.useMemo(() => {
-    const mods = access?.modules ?? [];
-    return mods;
+    return access?.modules ?? [];
   }, [access]);
 
   const toggleExpanded = (id: string) => {
@@ -302,6 +173,18 @@ export function Sidebar({ className }: SidebarProps) {
     return items;
   }, [modules, access, user]);
 
+  // Re-check scroll position when nav items or expanded items change
+  React.useEffect(() => {
+    if (isOpen) {
+      // Small delay to allow DOM to update
+      const timer = setTimeout(() => {
+        checkScrollPosition();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [navItems, expandedItems, isOpen, checkScrollPosition]);
+
+  // Auto-expand items based on current path
   React.useEffect(() => {
     const findItemsToExpand = (items: NavItem[], targetPath: string): Set<string> => {
       const toExpand = new Set<string>();
@@ -340,53 +223,11 @@ export function Sidebar({ className }: SidebarProps) {
     });
   }, [pathname, navItems]);
 
-  // Close profile menu when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('[data-profile-menu]')) {
-        setProfileMenuOpen(false);
-      }
-    };
-
-    if (profileMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [profileMenuOpen]);
-
-
   const renderIcon = (icon?: string, defaultIcon?: React.ReactNode) => {
     if (icon) {
-      if (icon.length <= 2 || icon.startsWith("http")) {
-        return <span className="text-lg flex-shrink-0 w-5 text-center">{icon}</span>;
-      }
       return <span className="text-lg flex-shrink-0 w-5 text-center">{icon}</span>;
     }
     return defaultIcon || <LayoutDashboard className="h-5 w-5 flex-shrink-0" />;
-  };
-
-  const getUserInitials = () => {
-    if (user?.firstName && user?.lastName) {
-      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
-    }
-    if (user?.email) {
-      return user.email[0].toUpperCase();
-    }
-    return "U";
-  };
-
-  const getUserDisplayName = () => {
-    if (user?.firstName && user?.lastName) {
-      return `${user.firstName} ${user.lastName}`;
-    }
-    if (user?.email) {
-      return user.email;
-    }
-    return "User";
   };
 
   const handleLogout = async () => {
@@ -501,67 +342,34 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen border-r flex flex-col",
+        "fixed left-0 top-0 z-40 h-screen border-r border-border/60 flex flex-col",
         "bg-muted/30 backdrop-blur-sm",
-        "transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+        "transition-[width] duration-300 ease-smooth",
         isOpen ? "w-64" : "w-16",
         !isOpen && "overflow-visible",
         className
       )}
     >
-      <div className="flex h-full flex-col">
-        {/* Header - Only Logo */}
-        <div className="relative flex h-16 items-center justify-center border-b border-border/50 px-4 transition-colors duration-300">
-          {/* Toggle Button - Positioned next to header logo */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className={cn(
-              "group absolute z-50 flex h-10 w-10 items-center justify-center",
-              "bg-transparent transition-all duration-300 ease-in-out",
-              isOpen ? "-right-4" : "-right-6",
-              "focus-visible:outline-none",
-              "cursor-pointer"
-            )}
-            aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
-            aria-expanded={isOpen}
-            type="button"
-          >
-            {isOpen ? (
-              <ChevronLeft 
-                className="h-5 w-5 text-muted-foreground transition-all duration-300 ease-in-out" 
-                strokeWidth={2.5}
-              />
-            ) : (
-              <ChevronRight 
-                className="h-5 w-5 text-muted-foreground transition-all duration-300 ease-in-out" 
-                strokeWidth={2.5}
-              />
-            )}
-          </button>
-          <div className="relative flex items-center justify-center w-full">
-            {isOpen ? (
-              <h2 className="text-lg font-bold text-foreground transition-all duration-300 ease-in-out opacity-100">
-                SS ERP
-              </h2>
-            ) : (
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-all duration-300 ease-in-out hover:bg-primary/90 opacity-100">
-                <span className="text-xs font-bold">SS</span>
-              </div>
-            )}
-          </div>
+      <div className="flex h-full flex-col min-h-0">
+        {/* Header - fixed height to prevent flickering */}
+        <div className="flex-shrink-0 h-16">
+          <SidebarHeader isOpen={isOpen} onToggle={toggle} />
         </div>
 
-        {/* Navigation */}
+        {/* Navigation - flex-1 with min-h-0 to prevent overflow issues */}
         <nav className={cn(
-          "flex-1 px-2 py-2",
+          "flex-1 min-h-0 px-2 py-2 relative",
           isOpen ? "overflow-hidden" : "overflow-visible"
         )}>
-          <div className={cn(
-            "h-full",
-            isOpen ? "overflow-y-auto" : "overflow-visible"
-          )}>
+          <div 
+            ref={scrollContainerRef}
+            className={cn(
+              "h-full",
+              isOpen ? "overflow-y-auto overflow-x-hidden scrollbar-hide" : "overflow-visible"
+            )}
+          >
             {navItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="flex flex-col items-center justify-center py-8 text-center min-h-[200px]">
                 <LayoutDashboard className="mb-2 h-8 w-8 text-muted-foreground" />
                 {isOpen && (
                   <p className="text-sm text-muted-foreground">
@@ -573,191 +381,24 @@ export function Sidebar({ className }: SidebarProps) {
               <div className="space-y-0">{navItems.map((item) => renderNavItem(item))}</div>
             )}
           </div>
-        </nav>
-
-        {/* User Profile Section */}
-        <div className={cn("border-t bg-muted/50", !isOpen && "overflow-visible")} data-profile-menu>
-          {isOpen ? (
-            <div className="p-3 space-y-2">
-              <button
-                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-background hover:bg-accent w-full transition-colors"
-              >
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold flex-shrink-0">
-                  {user?.avatar ? (
-                    <img
-                      src={user.avatar}
-                      alt={getUserDisplayName()}
-                      className="h-full w-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-xs">{getUserInitials()}</span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {getUserDisplayName()}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {user?.email}
-                  </p>
-                </div>
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 flex-shrink-0 transition-transform",
-                    profileMenuOpen === true && "rotate-180"
-                  )}
-                />
-              </button>
-
-              {profileMenuOpen && (
-                <div className="bg-background border rounded-lg shadow-md">
-                  <div className="px-2 py-2.5 border-b">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold flex-shrink-0">
-                        {user?.avatar ? (
-                          <img
-                            src={user.avatar}
-                            alt={getUserDisplayName()}
-                            className="h-full w-full rounded-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-xs">{getUserInitials()}</span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">
-                          {getUserDisplayName()}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {user?.email}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-0.5 space-y-0">
-                    <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
-                      <User className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{getUserDisplayName()}</span>
-                    </div>
-                    <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
-                      <Mail className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{user?.email}</span>
-                    </div>
-                    {user?.roles && user.roles.length > 0 && (
-                      <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
-                        <Settings className="h-4 w-4 flex-shrink-0" />
-                        <span className="truncate">{user.roles.join(", ")}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="border-t p-0.5">
-                    <button
-                      onClick={handleLogout}
-                      className="flex w-full items-center gap-2.5 px-2 py-1.5 rounded-md text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
-                    >
-                      <LogOut className="h-4 w-4 flex-shrink-0" />
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="p-2 space-y-2">
-              <div className="relative">
-                <button
-                  ref={profileButtonRef}
-                  onClick={() => {
-                    if (profileButtonRef.current) {
-                      const rect = profileButtonRef.current.getBoundingClientRect();
-                      setPopoverPosition({
-                        top: rect.top + rect.height / 2,
-                        left: rect.right + 8,
-                      });
-                    }
-                    setProfileMenuOpen(!profileMenuOpen);
-                  }}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors mx-auto"
-                  title={getUserDisplayName()}
-                  data-profile-menu
-                >
-                  {user?.avatar ? (
-                    <img
-                      src={user.avatar}
-                      alt={getUserDisplayName()}
-                      className="h-full w-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-xs">{getUserInitials()}</span>
-                  )}
-                </button>
-                {mounted && profileMenuOpen && !isOpen && createPortal(
-                <div 
-                  className="fixed z-[9999] min-w-[220px] bg-background border rounded-lg shadow-lg"
-                  style={{ 
-                    top: `${popoverPosition.top}px`,
-                    left: `${popoverPosition.left}px`,
-                    transform: 'translateY(-90%)'
-                  }}
-                  onMouseEnter={() => setProfileMenuOpen(true)}
-                  onMouseLeave={() => setProfileMenuOpen(false)}
-                  data-profile-menu
-                >
-                  <div className="px-2 py-2.5 border-b">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold flex-shrink-0">
-                        {user?.avatar ? (
-                          <img
-                            src={user.avatar}
-                            alt={getUserDisplayName()}
-                            className="h-full w-full rounded-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-xs">{getUserInitials()}</span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">
-                          {getUserDisplayName()}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {user?.email}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-0.5 space-y-0">
-                    <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
-                      <User className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{getUserDisplayName()}</span>
-                    </div>
-                    <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
-                      <Mail className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{user?.email}</span>
-                    </div>
-                    {user?.roles && user.roles.length > 0 && (
-                      <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
-                        <Settings className="h-4 w-4 flex-shrink-0" />
-                        <span className="truncate">{user.roles.join(", ")}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="border-t p-0.5">
-                    <button
-                      onClick={handleLogout}
-                      className="flex w-full items-center gap-2.5 px-2 py-1.5 rounded-md text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
-                    >
-                      <LogOut className="h-4 w-4 flex-shrink-0" />
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                </div>,
-                document.body
-              )}
+          
+          {/* Scroll Indicator - Animated down arrow */}
+          {isOpen && showScrollIndicator && (
+            <div className="absolute bottom-0 left-0 right-0 flex justify-center pointer-events-none z-10 pb-1">
+              <div className="animate-bounce">
+                <ChevronDown className="h-4 w-4 text-muted-foreground/70" />
               </div>
             </div>
           )}
+        </nav>
+
+        {/* User Profile Section - fixed height to prevent flickering */}
+        <div className="flex-shrink-0">
+          <SidebarUserProfile 
+            user={user} 
+            isOpen={isOpen} 
+            onLogout={handleLogout} 
+          />
         </div>
       </div>
     </aside>

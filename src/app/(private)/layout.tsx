@@ -2,6 +2,8 @@
 
 import { Sidebar } from "@/components/layout/sidebar";
 import { SidebarProvider, useSidebar } from "@/components/layout/sidebar-context";
+import { SkeletonDashboard } from "@/components/ui/skeleton";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils/cn";
 import { useAuthStore } from "@/lib/auth/auth-store";
 import { useRouter } from "next/navigation";
@@ -27,13 +29,7 @@ export default function PrivateLayout({
   }, [isAuthenticated, isLoading, router]);
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="text-lg">Loading...</div>
-        </div>
-      </div>
-    );
+    return <SkeletonDashboard />;
   }
 
   if (!isAuthenticated) {
@@ -51,15 +47,24 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const { isOpen } = useSidebar();
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-background">
       <Sidebar />
       <div
         className={cn(
-          "flex flex-1 flex-col transition-[margin-left] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+          "flex flex-1 flex-col transition-[margin-left] duration-300 ease-smooth",
           isOpen ? "ml-64" : "ml-16"
         )}
       >
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        {/* Fixed Theme Toggle - Top Right */}
+        <div className="fixed top-4 right-4 z-50">
+          <ThemeToggle variant="icon" />
+        </div>
+        
+        <main className="flex-1 overflow-auto">
+          <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );

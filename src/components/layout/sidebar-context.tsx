@@ -1,19 +1,29 @@
 "use client";
 
 import * as React from "react";
+import { useLocalStorageState, createStorageKey } from "@/lib/hooks";
 
 interface SidebarContextType {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
+  toggle: () => void;
 }
 
 const SidebarContext = React.createContext<SidebarContextType | undefined>(undefined);
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const [isOpen, setIsOpen] = React.useState(true);
+  // Persist sidebar open/close state in localStorage
+  const [isOpen, setIsOpen] = useLocalStorageState<boolean>(
+    createStorageKey("sidebar", "is-open"),
+    true
+  );
+
+  const toggle = React.useCallback(() => {
+    setIsOpen((prev) => !prev);
+  }, [setIsOpen]);
 
   return (
-    <SidebarContext.Provider value={{ isOpen, setIsOpen }}>
+    <SidebarContext.Provider value={{ isOpen, setIsOpen, toggle }}>
       {children}
     </SidebarContext.Provider>
   );

@@ -17,7 +17,7 @@ import type { PermissionTreeModule } from "../../domain/types";
 import { apiClient } from "@/lib/api/api-client";
 import { API_ENDPOINTS } from "@/config/api";
 import { useQuery } from "@tanstack/react-query";
-import { useToast } from "@/lib/hooks/use-toast";
+import { useToast, useLocalStorageSet, createStorageKey } from "@/lib/hooks";
 import { logger } from "@/lib/logger/logger";
 
 interface User {
@@ -36,6 +36,22 @@ interface UserPermissionsTabProps {
 export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermissionsTabProps = {}) {
   const [selectedUserId, setSelectedUserId] = React.useState<string>(initialUserId || "");
   const [searchQuery, setSearchQuery] = React.useState<string>("");
+  
+  // Persist expanded states in localStorage (survives refresh)
+  // Use userId in key so each user's tree state is separate
+  const storageKey = selectedUserId 
+    ? createStorageKey("system-management", "user-permissions", selectedUserId)
+    : createStorageKey("system-management", "user-permissions", "default");
+  
+  const [expandedModules, setExpandedModules] = useLocalStorageSet<string>(
+    `${storageKey}:expanded-modules`
+  );
+  const [expandedSubmodules, setExpandedSubmodules] = useLocalStorageSet<string>(
+    `${storageKey}:expanded-submodules`
+  );
+  const [expandedFeatures, setExpandedFeatures] = useLocalStorageSet<string>(
+    `${storageKey}:expanded-features`
+  );
 
   // Sync initialUserId with selectedUserId when it changes
   React.useEffect(() => {
@@ -575,6 +591,12 @@ export function UserPermissionsTab({ userId: initialUserId, onBack }: UserPermis
                   onSubmoduleToggle={handleSubmoduleToggle}
                   onFeatureToggle={handleFeatureToggle}
                   onOperationToggle={handleOperationToggle}
+                  expandedModules={expandedModules}
+                  expandedSubmodules={expandedSubmodules}
+                  expandedFeatures={expandedFeatures}
+                  onExpandedModulesChange={setExpandedModules}
+                  onExpandedSubmodulesChange={setExpandedSubmodules}
+                  onExpandedFeaturesChange={setExpandedFeatures}
                 />
               </div>
             )}

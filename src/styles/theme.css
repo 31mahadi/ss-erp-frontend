@@ -4,56 +4,114 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Modern Deep Indigo/Violet Theme */
+    --background: 240 10% 98%;
+    --foreground: 240 10% 6%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 240 10% 6%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
-    --success: 142.1 76.2% 36.3%;
-    --success-foreground: 355.7 100% 97.3%;
-    --danger: 0 84.2% 60.2%;
-    --danger-foreground: 210 40% 98%;
+    --popover-foreground: 240 10% 6%;
+    
+    /* Primary - Deep Indigo with vibrance */
+    --primary: 243 75% 59%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary - Soft slate */
+    --secondary: 240 5% 94%;
+    --secondary-foreground: 240 10% 20%;
+    
+    /* Muted - Subtle gray-violet */
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 5% 46%;
+    
+    /* Accent - Warm violet tint */
+    --accent: 250 80% 96%;
+    --accent-foreground: 243 75% 45%;
+    
+    /* Destructive - Refined red */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Success - Emerald */
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+    
+    /* Warning - Amber */
+    --warning: 38 92% 50%;
+    --warning-foreground: 38 92% 20%;
+    
+    /* Danger - Warm red */
+    --danger: 0 72% 51%;
+    --danger-foreground: 0 0% 100%;
+    
+    /* Border & Input */
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 243 75% 59%;
+    
+    /* Radius */
+    --radius: 0.625rem;
+    
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+  
+  /* Dark mode shadows - more visible with glow effect */
+  .dark {
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3), 0 0 0 1px rgb(255 255 255 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.3), 0 0 0 1px rgb(255 255 255 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.05);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(255 255 255 / 0.05);
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
-    --success: 142.1 70.6% 45.3%;
-    --success-foreground: 210 40% 98%;
-    --danger: 0 62.8% 30.6%;
-    --danger-foreground: 210 40% 98%;
+    /* Dark Mode - Deep midnight with violet undertones - Improved visibility */
+    --background: 240 10% 6%;
+    --foreground: 240 10% 98%;
+    --card: 240 10% 12%;
+    --card-foreground: 240 10% 98%;
+    --popover: 240 10% 10%;
+    --popover-foreground: 240 10% 98%;
+    
+    /* Primary - Brighter indigo for dark mode */
+    --primary: 245 82% 67%;
+    --primary-foreground: 240 10% 6%;
+    
+    /* Secondary - Better contrast */
+    --secondary: 240 6% 22%;
+    --secondary-foreground: 240 10% 98%;
+    
+    /* Muted - Much more visible text */
+    --muted: 240 6% 18%;
+    --muted-foreground: 240 5% 85%;
+    
+    /* Accent - Better visibility */
+    --accent: 250 50% 25%;
+    --accent-foreground: 245 82% 85%;
+    
+    /* Destructive */
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Success */
+    --success: 160 84% 50%;
+    --success-foreground: 0 0% 100%;
+    
+    /* Warning */
+    --warning: 38 92% 55%;
+    --warning-foreground: 0 0% 10%;
+    
+    /* Danger */
+    --danger: 0 72% 50%;
+    --danger-foreground: 0 0% 100%;
+    
+    /* Border & Input - Much more visible */
+    --border: 240 6% 30%;
+    --input: 240 6% 28%;
+    --ring: 245 82% 67%;
   }
 }
 
@@ -61,7 +119,461 @@
   * {
     @apply border-border;
   }
+  
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Improved focus states */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+  
+  /* Better selection colors */
+  ::selection {
+    @apply bg-primary/20 text-foreground;
+  }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+  
+  /* Dark mode scrollbar improvements */
+  .dark ::-webkit-scrollbar-thumb {
+    @apply bg-border/60;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb:hover {
+    @apply bg-border/80;
+  }
+  
+  /* Hide scrollbar but keep scrollable */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+}
+
+/* Animations */
+@layer utilities {
+  /* Page transitions */
+  .animate-in {
+    animation: animate-in 0.25s ease-out forwards;
+  }
+  
+  .animate-out {
+    animation: animate-out 0.2s ease-in forwards;
+  }
+  
+  @keyframes animate-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes animate-out {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+  
+  /* Fade animations */
+  .fade-in {
+    animation: fade-in 0.3s ease-out forwards;
+  }
+  
+  .fade-in-50 {
+    animation: fade-in 0.2s ease-out forwards;
+  }
+  
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  /* Slide animations */
+  .slide-in-from-left {
+    animation: slide-in-from-left 0.3s ease-out forwards;
+  }
+  
+  .slide-in-from-right {
+    animation: slide-in-from-right 0.3s ease-out forwards;
+  }
+  
+  .slide-in-from-top {
+    animation: slide-in-from-top 0.3s ease-out forwards;
+  }
+  
+  .slide-in-from-bottom {
+    animation: slide-in-from-bottom 0.3s ease-out forwards;
+  }
+  
+  @keyframes slide-in-from-left {
+    from {
+      opacity: 0;
+      transform: translateX(-12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes slide-in-from-right {
+    from {
+      opacity: 0;
+      transform: translateX(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes slide-in-from-top {
+    from {
+      opacity: 0;
+      transform: translateY(-12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes slide-in-from-bottom {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Scale animations */
+  .scale-in {
+    animation: scale-in 0.2s ease-out forwards;
+  }
+  
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  /* Pulse animation for loading states */
+  .pulse-soft {
+    animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  
+  /* Stagger children animations */
+  .stagger-children > * {
+    animation: animate-in 0.3s ease-out backwards;
+  }
+  
+  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+  .stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+  .stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+  .stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+  .stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+  .stagger-children > *:nth-child(7) { animation-delay: 300ms; }
+  .stagger-children > *:nth-child(8) { animation-delay: 350ms; }
+  
+  /* Shimmer effect for loading */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  
+  /* Glassmorphism utility */
+  .glass {
+    @apply bg-background/80 backdrop-blur-md;
+  }
+  
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary to-accent-foreground bg-clip-text text-transparent;
+  }
+  
+  /* Better transitions */
+  .transition-smooth {
+    @apply transition-all duration-200 ease-out;
+  }
+  
+  .transition-colors-smooth {
+    @apply transition-colors duration-150 ease-out;
+  }
+}
+
+/* Component-specific animations */
+@layer components {
+  /* Card hover effects */
+  .card-hover {
+    @apply transition-all duration-200 ease-out;
+  }
+  
+  .card-hover:hover {
+    @apply shadow-md -translate-y-0.5;
+  }
+  
+  /* Button press effect */
+  .btn-press:active {
+    @apply scale-[0.98];
+  }
+  
+  /* Tree item styling */
+  .tree-item {
+    @apply transition-all duration-150 ease-out rounded-md;
+  }
+  
+  .tree-item:hover {
+    @apply bg-accent/50;
+  }
+  
+  .tree-item-active {
+    @apply bg-accent text-accent-foreground font-medium;
+  }
+  
+  /* Consistent node styling for tree structures */
+  .tree-node {
+    @apply flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors duration-150;
+  }
+  
+  .tree-node:hover {
+    @apply bg-accent/50;
+  }
+  
+  .tree-node-module {
+    @apply font-semibold text-base;
+  }
+  
+  .tree-node-submodule {
+    @apply font-medium text-sm;
+  }
+  
+  .tree-node-feature {
+    @apply text-sm;
+  }
+  
+  .tree-node-operation {
+    @apply text-xs text-muted-foreground;
+  }
+  
+  /* Badge for node types */
+  .node-badge {
+    @apply text-xs px-1.5 py-0.5 rounded font-medium;
+  }
+  
+  .node-badge-default {
+    @apply bg-primary/10 text-primary;
+  }
+  
+  .node-badge-success {
+    @apply bg-success/10 text-success;
+  }
+  
+  .node-badge-warning {
+    @apply bg-warning/10 text-warning;
+  }
+  
+  /* Dialog improvements */
+  .dialog-overlay {
+    @apply fixed inset-0 z-50 bg-black/60 backdrop-blur-sm;
+    animation: fade-in 0.15s ease-out;
+  }
+  
+  .dialog-content {
+    @apply fixed z-50 bg-background rounded-xl shadow-lg border;
+    animation: scale-in 0.2s ease-out;
+  }
+  
+  /* Input focus ring */
+  .input-focus {
+    @apply focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background focus:border-primary;
+  }
+  
+  /* Sidebar styling */
+  .sidebar-item {
+    @apply flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium transition-all duration-150;
+  }
+  
+  .sidebar-item:hover {
+    @apply bg-accent/50 text-accent-foreground;
+  }
+  
+  .sidebar-item-active {
+    @apply bg-accent text-accent-foreground border-l-2 border-primary;
+  }
+  
+  /* Dark mode specific improvements */
+  .dark .card {
+    @apply border-border/60;
+  }
+  
+  .dark .card:hover {
+    @apply border-border/80;
+  }
+  
+  /* Better separation in dark mode */
+  .dark .border-t,
+  .dark .border-b,
+  .dark .border-l,
+  .dark .border-r {
+    @apply border-border/60;
+  }
+  
+  /* Improved input visibility in dark mode */
+  .dark input,
+  .dark textarea,
+  .dark select {
+    @apply border-border/60 bg-card text-foreground;
+  }
+  
+  .dark input:focus,
+  .dark textarea:focus,
+  .dark select:focus {
+    @apply border-primary/60 ring-primary/20;
+  }
+  
+  /* Better table borders in dark mode */
+  .dark table {
+    @apply border-border/60;
+  }
+  
+  .dark th,
+  .dark td {
+    @apply border-border/50 text-foreground;
+  }
+  
+  /* Improved dialog/modal visibility */
+  .dark [role="dialog"] {
+    @apply border-border/70 shadow-2xl;
+  }
+  
+  /* Better button visibility */
+  .dark button[data-variant="outline"] {
+    @apply border-border/70;
+  }
+  
+  .dark button[data-variant="outline"]:hover {
+    @apply border-border bg-accent/30;
+  }
+  
+  /* Improved divider visibility */
+  .dark hr {
+    @apply border-border/60;
+  }
+  
+  /* Better badge visibility */
+  .dark .badge {
+    @apply border-border/50;
+  }
+  
+  /* Enhanced text visibility in dark mode */
+  .dark {
+    color-scheme: dark;
+  }
+  
+  /* Improve text contrast */
+  .dark p,
+  .dark span,
+  .dark div {
+    @apply text-foreground;
+  }
+  
+  /* Better muted text visibility */
+  .dark .text-muted-foreground {
+    color: hsl(var(--muted-foreground));
+    opacity: 0.9;
+  }
+  
+  /* Improve label visibility */
+  .dark label {
+    @apply text-foreground;
+  }
+  
+  /* Better placeholder text */
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: hsl(var(--muted-foreground));
+    opacity: 0.7;
+  }
+  
+  /* Improve heading visibility */
+  .dark h1,
+  .dark h2,
+  .dark h3,
+  .dark h4,
+  .dark h5,
+  .dark h6 {
+    @apply text-foreground;
+    font-weight: 600;
+  }
+  
+  /* Better link visibility */
+  .dark a {
+    @apply text-foreground;
+  }
+  
+  .dark a:hover {
+    @apply text-primary;
   }
 }

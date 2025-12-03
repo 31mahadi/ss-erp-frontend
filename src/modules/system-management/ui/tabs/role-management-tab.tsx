@@ -11,12 +11,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createRoleSchema, type CreateRoleInput } from "../../domain/schema";
 import { useCreateRole } from "../../hooks/use-system-management";
-import { useToast } from "@/lib/hooks/use-toast";
+import { useToast, useUrlState } from "@/lib/hooks";
 import { RolePermissionsTab } from "./role-permissions-tab";
 import { RolesTab } from "./roles-tab";
 
 export function RoleManagementTab() {
-  const [selectedRoleId, setSelectedRoleId] = React.useState<string | null>(null);
+  // Persist selected role in URL (so it survives refresh)
+  const [selectedRoleId, setSelectedRoleId] = useUrlState<string>("roleId", null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
   const createRole = useCreateRole();
   const toast = useToast();

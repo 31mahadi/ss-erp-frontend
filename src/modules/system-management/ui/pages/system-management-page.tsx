@@ -10,8 +10,11 @@ import { UserManagementTab } from "../tabs/user-management-tab";
 import { 
   FolderTree, 
   Shield, 
-  UserCog
+  UserCog,
+  Settings
 } from "lucide-react";
+import { cn } from "@/lib/utils/cn";
+import { useUrlState } from "@/lib/hooks";
 
 type Section = "structure" | "roles" | "users";
 
@@ -44,9 +47,8 @@ const navItems: NavItem[] = [
 ];
 
 export function SystemManagementPage() {
-  const [activeSection, setActiveSection] = React.useState<Section>("structure");
-
-  const activeItem = navItems.find((item) => item.id === activeSection);
+  // Persist active tab in URL (shareable, bookmarkable)
+  const [activeSection, setActiveSection] = useUrlState<Section>("tab", "structure");
 
   const renderContent = () => {
     switch (activeSection) {
@@ -63,67 +65,83 @@ export function SystemManagementPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="System Management"
-        description="Configure permissions, modules, and system structure"
-      />
-      
-      <div className="flex gap-6">
-        {/* Sidebar Navigation */}
-        <aside className="w-64 flex-shrink-0">
-          <Card className="sticky top-4">
-            <CardContent className="p-4">
-              <nav className="space-y-1">
-                {navItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveSection(item.id)}
-                    className={`w-full flex items-start gap-3 p-3 rounded-lg transition-all text-left group relative ${
-                      activeSection === item.id
-                        ? "bg-primary text-primary-foreground shadow-md"
-                        : "hover:bg-accent/50 text-foreground"
-                    }`}
-                  >
-                    {activeSection === item.id && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary-foreground rounded-r-full" />
-                    )}
-                    <span className={`mt-0.5 flex-shrink-0 transition-colors ${
-                      activeSection === item.id 
-                        ? "text-primary-foreground" 
-                        : "text-muted-foreground group-hover:text-foreground"
-                    }`}>
-                      {item.icon}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className={`font-medium text-sm transition-colors ${
-                        activeSection === item.id ? "text-primary-foreground" : ""
-                      }`}>
-                        {item.label}
-                      </div>
-                      <div className={`text-xs mt-0.5 transition-colors ${
+      <div className="space-y-6 animate-in fade-in duration-300">
+        {/* Header with icon */}
+        <div className="flex items-start gap-4">
+          <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Settings className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">System Management</h1>
+            <p className="text-muted-foreground mt-1">
+              Configure permissions, modules, and system structure
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex gap-6">
+          {/* Sidebar Navigation */}
+          <aside className="w-72 flex-shrink-0">
+            <Card className="sticky top-4 shadow-md border-border/50">
+              <CardContent className="p-3">
+                <nav className="space-y-1">
+                  {navItems.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveSection(item.id)}
+                      className={cn(
+                        "w-full flex items-start gap-3 p-3 rounded-lg transition-all duration-200 text-left group relative overflow-hidden",
                         activeSection === item.id
-                          ? "text-primary-foreground/80"
-                          : "text-muted-foreground"
-                      }`}>
-                        {item.description}
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                          : "hover:bg-accent/60 text-foreground"
+                      )}
+                    >
+                      {/* Active indicator */}
+                      {activeSection === item.id && (
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-foreground/50 rounded-r-full" />
+                      )}
+                      
+                      <span className={cn(
+                        "mt-0.5 flex-shrink-0 transition-colors p-1.5 rounded-md",
+                        activeSection === item.id 
+                          ? "text-primary-foreground bg-primary-foreground/10" 
+                          : "text-muted-foreground group-hover:text-foreground bg-muted/50"
+                      )}>
+                        {item.icon}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className={cn(
+                          "font-semibold text-sm transition-colors",
+                          activeSection === item.id ? "text-primary-foreground" : ""
+                        )}>
+                          {item.label}
+                        </div>
+                        <div className={cn(
+                          "text-xs mt-0.5 transition-colors leading-relaxed",
+                          activeSection === item.id
+                            ? "text-primary-foreground/80"
+                            : "text-muted-foreground"
+                        )}>
+                          {item.description}
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                ))}
-              </nav>
-            </CardContent>
-          </Card>
-        </aside>
+                    </button>
+                  ))}
+                </nav>
+              </CardContent>
+            </Card>
+          </aside>
 
-        {/* Main Content Area */}
-        <main className="flex-1 min-w-0">
-          <div className="space-y-6">
-            {/* Content */}
-            <div className="animate-in fade-in-50 duration-200">
+          {/* Main Content Area */}
+          <main className="flex-1 min-w-0">
+            <div 
+              key={activeSection}
+              className="animate-in fade-in slide-in-from-right-4 duration-200"
+            >
               {renderContent()}
             </div>
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
     </PageContainer>
   );

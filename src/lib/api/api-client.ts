@@ -10,11 +10,26 @@ class ApiClient {
   private tokenExpiryTime: number | null = null;
   private refreshPromise: Promise<string | null> | null = null;
   private refreshTimer: NodeJS.Timeout | null = null;
+  private refreshIntervalId: NodeJS.Timeout | null = null;
 
   constructor() {
     this.baseURL = API_CONFIG.baseURL;
     this.timeout = API_CONFIG.timeout;
     this.startProactiveRefresh();
+  }
+
+  /**
+   * Cleanup method to prevent memory leaks
+   * Call this when the client is no longer needed
+   */
+  public dispose(): void {
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+      this.refreshIntervalId = null;
+    }
+    this.cancelProactiveRefresh();
+    this.accessToken = null;
+    this.tokenExpiryTime = null;
   }
 
   /**
@@ -117,8 +132,13 @@ class ApiClient {
    * Start proactive refresh mechanism
    */
   private startProactiveRefresh(): void {
+    // Clear any existing interval first
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+    }
+    
     // Check token expiry every 15 seconds for more responsive refresh
-    setInterval(() => {
+    this.refreshIntervalId = setInterval(() => {
       if (this.tokenExpiryTime && this.accessToken) {
         const now = Date.now();
         const timeUntilExpiry = this.tokenExpiryTime - now;

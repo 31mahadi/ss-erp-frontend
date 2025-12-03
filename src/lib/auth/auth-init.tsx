@@ -55,9 +55,21 @@ export function AuthInit({ children }: { children: React.ReactNode }) {
   // Show loading state while initializing
   if (!isInitialized) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="text-lg">Initializing...</div>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-300">
+          {/* Animated Logo/Spinner */}
+          <div className="relative">
+            <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center">
+              <span className="text-xl font-bold text-primary">SS</span>
+            </div>
+            <div className="absolute -inset-1 rounded-xl border-2 border-primary/30 border-t-primary animate-spin" />
+          </div>
+          
+          {/* Loading text */}
+          <div className="text-center space-y-1">
+            <p className="text-sm font-medium text-foreground">Initializing</p>
+            <p className="text-xs text-muted-foreground">Please wait...</p>
+          </div>
         </div>
       </div>
     );
