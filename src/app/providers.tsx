@@ -12,12 +12,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          <AuthInit>
-            {children}
-            <Toaster />
-          </AuthInit>
-        </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthInit>
+        {children}
+        <Toaster />
+      </AuthInit>
+    </QueryClientProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

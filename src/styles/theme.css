@@ -44,9 +44,9 @@
     --danger: 0 72% 51%;
     --danger-foreground: 0 0% 100%;
     
-    /* Border & Input */
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
+    /* Border & Input - More visible */
+    --border: 240 6% 85%;
+    --input: 240 6% 85%;
     --ring: 243 75% 59%;
     
     /* Radius */
@@ -86,7 +86,7 @@
     
     /* Muted - Much more visible text */
     --muted: 240 6% 18%;
-    --muted-foreground: 240 5% 85%;
+    --muted-foreground: 240 5% 96%;
     
     /* Accent - Better visibility */
     --accent: 250 50% 25%;
@@ -109,8 +109,8 @@
     --danger-foreground: 0 0% 100%;
     
     /* Border & Input - Much more visible */
-    --border: 240 6% 30%;
-    --input: 240 6% 28%;
+    --border: 240 6% 35%;
+    --input: 240 6% 32%;
     --ring: 245 82% 67%;
   }
 }
@@ -361,6 +361,48 @@
   .transition-colors-smooth {
     @apply transition-colors duration-150 ease-out;
   }
+  
+  /* Golden Ratio Spacing Utilities */
+  .spacing-golden-xs {
+    gap: calc(1rem / 1.618);
+  }
+  
+  .spacing-golden-sm {
+    gap: 1rem;
+  }
+  
+  .spacing-golden-md {
+    gap: calc(1rem * 1.618);
+  }
+  
+  .spacing-golden-lg {
+    gap: calc(1rem * 2.618);
+  }
+  
+  .spacing-golden-xl {
+    gap: calc(1rem * 4.236);
+  }
+  
+  /* Golden Ratio Padding */
+  .p-golden-xs {
+    padding: calc(1rem / 1.618);
+  }
+  
+  .p-golden-sm {
+    padding: 1rem;
+  }
+  
+  .p-golden-md {
+    padding: calc(1rem * 1.618);
+  }
+  
+  .p-golden-lg {
+    padding: calc(1rem * 2.618);
+  }
+  
+  .p-golden-xl {
+    padding: calc(1rem * 4.236);
+  }
 }
 
 /* Component-specific animations */
@@ -465,42 +507,83 @@
   
   /* Dark mode specific improvements */
   .dark .card {
-    @apply border-border/60;
-  }
-  
-  .dark .card:hover {
     @apply border-border/80;
   }
   
-  /* Better separation in dark mode */
+  .dark .card:hover {
+    @apply border-border;
+  }
+  
+  /* Light mode card borders - More visible */
+  .card {
+    border-color: hsl(var(--border));
+  }
+  
+  .card:hover {
+    border-color: hsl(var(--border));
+    opacity: 1;
+  }
+  
+  /* Better separation in dark mode - More visible borders */
   .dark .border-t,
   .dark .border-b,
   .dark .border-l,
   .dark .border-r {
-    @apply border-border/60;
+    @apply border-border/80;
+  }
+  
+  /* Light mode borders - More visible */
+  .border-t,
+  .border-b,
+  .border-l,
+  .border-r {
+    border-color: hsl(var(--border));
   }
   
   /* Improved input visibility in dark mode */
   .dark input,
   .dark textarea,
   .dark select {
-    @apply border-border/60 bg-card text-foreground;
+    @apply border-border/80 bg-card text-foreground;
   }
   
   .dark input:focus,
   .dark textarea:focus,
   .dark select:focus {
-    @apply border-primary/60 ring-primary/20;
+    @apply border-primary/80 ring-primary/30;
+  }
+  
+  /* Light mode inputs - More visible borders */
+  input,
+  textarea,
+  select {
+    border-color: hsl(var(--border));
+  }
+  
+  input:focus,
+  textarea:focus,
+  select:focus {
+    border-color: hsl(var(--primary));
   }
   
   /* Better table borders in dark mode */
   .dark table {
-    @apply border-border/60;
+    @apply border-border/80;
   }
   
   .dark th,
   .dark td {
-    @apply border-border/50 text-foreground;
+    @apply border-border/70 text-foreground;
+  }
+  
+  /* Light mode table borders */
+  table {
+    border-color: hsl(var(--border));
+  }
+  
+  th,
+  td {
+    border-color: hsl(var(--border));
   }
   
   /* Improved dialog/modal visibility */
@@ -510,16 +593,30 @@
   
   /* Better button visibility */
   .dark button[data-variant="outline"] {
-    @apply border-border/70;
+    @apply border-border/80;
   }
   
   .dark button[data-variant="outline"]:hover {
     @apply border-border bg-accent/30;
   }
   
+  /* Light mode outline buttons */
+  button[data-variant="outline"] {
+    border-color: hsl(var(--border));
+  }
+  
+  button[data-variant="outline"]:hover {
+    border-color: hsl(var(--primary));
+  }
+  
   /* Improved divider visibility */
   .dark hr {
-    @apply border-border/60;
+    @apply border-border/80;
+  }
+  
+  /* Light mode divider */
+  hr {
+    border-color: hsl(var(--border));
   }
   
   /* Better badge visibility */
@@ -539,10 +636,27 @@
     @apply text-foreground;
   }
   
-  /* Better muted text visibility */
+  /* Better muted text visibility - White and sharp */
   .dark .text-muted-foreground {
+    color: hsl(240 5% 96%);
+    font-weight: 500;
+    opacity: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Improve small text visibility */
+  .dark .text-xs,
+  .dark .text-sm {
+    color: hsl(var(--foreground));
+    opacity: 0.95;
+  }
+  
+  /* Small muted text - higher contrast */
+  .dark .text-xs.text-muted-foreground,
+  .dark .text-sm.text-muted-foreground {
     color: hsl(var(--muted-foreground));
-    opacity: 0.9;
+    opacity: 1;
   }
   
   /* Improve label visibility */
@@ -550,11 +664,14 @@
     @apply text-foreground;
   }
   
-  /* Better placeholder text */
+  /* Better placeholder text - White and sharp */
   .dark input::placeholder,
   .dark textarea::placeholder {
-    color: hsl(var(--muted-foreground));
-    opacity: 0.7;
+    color: hsl(240 5% 90%);
+    font-weight: 500;
+    opacity: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   
   /* Improve heading visibility */
@@ -575,5 +692,90 @@
   
   .dark a:hover {
     @apply text-primary;
+  }
+  
+  /* Improve small text visibility - critical for readability - White and sharp */
+  .dark .text-xs {
+    color: hsl(240 10% 98%);
+    font-weight: 500;
+    opacity: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  .dark .text-sm {
+    color: hsl(240 10% 98%);
+    font-weight: 500;
+    opacity: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Small muted text - much higher contrast - Almost white */
+  .dark .text-xs.text-muted-foreground,
+  .dark .text-sm.text-muted-foreground {
+    color: hsl(240 5% 96%);
+    font-weight: 500;
+    opacity: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Improve description and helper text - White and sharp */
+  .dark p.text-muted-foreground,
+  .dark span.text-muted-foreground,
+  .dark div.text-muted-foreground {
+    color: hsl(240 5% 96%);
+    font-weight: 500;
+    opacity: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Better visibility for labels and captions - White and sharp */
+  .dark label.text-muted-foreground,
+  .dark .caption,
+  .dark .helper-text {
+    color: hsl(240 5% 96%);
+    font-weight: 500;
+    opacity: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Improve card description text - White and sharp */
+  .dark [class*="description"],
+  .dark [class*="Description"] {
+    color: hsl(240 5% 96%);
+    font-weight: 500;
+    opacity: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Badge and small UI elements */
+  .dark .badge,
+  .dark [class*="badge"] {
+    color: hsl(var(--foreground));
+  }
+  
+  /* Improve table cell text - White and sharp */
+  .dark td.text-muted-foreground,
+  .dark th.text-muted-foreground {
+    color: hsl(240 5% 96%);
+    font-weight: 500;
+    opacity: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* All small text elements - ensure white and sharp */
+  .dark .text-xs,
+  .dark .text-sm,
+  .dark small {
+    color: hsl(240 10% 98%);
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }

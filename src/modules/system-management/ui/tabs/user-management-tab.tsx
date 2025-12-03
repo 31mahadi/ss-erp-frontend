@@ -88,8 +88,8 @@ export function UserManagementTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>User Management</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <CardTitle className="text-base">User Management</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
                 Manage users, assign roles, and configure explicit permissions (including denials)
               </p>
             </div>

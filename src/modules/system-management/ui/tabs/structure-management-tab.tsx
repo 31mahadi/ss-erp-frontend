@@ -192,8 +192,8 @@ export function StructureManagementTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>System Structure</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <CardTitle className="text-base">System Structure</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
                 Create and manage modules, submodules, features, and operations in a hierarchical structure.
               </p>
             </div>

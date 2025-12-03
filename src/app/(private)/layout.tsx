@@ -61,7 +61,8 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         </div>
         
         <main className="flex-1 overflow-auto">
-          <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+          {/* Golden Ratio Layout: max-width uses golden ratio proportion, padding follows golden ratio */}
+          <div className="container mx-auto max-w-[1618px] px-[1.618rem] sm:px-[2.618rem] lg:px-[4.236rem] py-[2.618rem] lg:py-[4.236rem]">
             {children}
           </div>
         </main>

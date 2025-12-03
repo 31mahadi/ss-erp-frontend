@@ -65,10 +65,10 @@ export default function DashboardPage() {
               <Clock className="h-4 w-4" />
               <span className="text-sm">{new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</span>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2">
+            <h1 className="text-xl font-semibold tracking-tight mb-2">
               {greeting}, <span className="text-primary">{firstName}</span>!
             </h1>
-            <p className="text-muted-foreground max-w-xl">
+            <p className="text-sm text-muted-foreground max-w-xl">
               Welcome to SS ERP system. Here's an overview of your workspace and recent activity.
             </p>
           </div>

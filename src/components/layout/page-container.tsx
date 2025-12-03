@@ -7,7 +7,7 @@ interface PageContainerProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export function PageContainer({ className, children, ...props }: PageContainerProps) {
   return (
-    <div className={cn("container mx-auto px-4 py-6 max-w-7xl", className)} {...props}>
+    <div className={cn("container mx-auto px-[1.618rem] py-[2.618rem] max-w-[1618px]", className)} {...props}>
       {children}
     </div>
   );

@@ -67,23 +67,23 @@ export function SystemManagementPage() {
     <PageContainer>
       <div className="space-y-6 animate-in fade-in duration-300">
         {/* Header with icon */}
-        <div className="flex items-start gap-4">
-          <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <Settings className="h-6 w-6 text-primary" />
+        <div className="flex items-start gap-3">
+          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Settings className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">System Management</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-lg font-semibold tracking-tight">System Management</h1>
+            <p className="text-sm text-muted-foreground mt-1">
               Configure permissions, modules, and system structure
             </p>
           </div>
         </div>
         
-        <div className="flex gap-6">
+        <div className="flex gap-4">
           {/* Sidebar Navigation */}
-          <aside className="w-72 flex-shrink-0">
+          <aside className="w-64 flex-shrink-0">
             <Card className="sticky top-4 shadow-md border-border/50">
-              <CardContent className="p-3">
+              <CardContent className="p-2.5">
                 <nav className="space-y-1">
                   {navItems.map((item) => (
                     <button

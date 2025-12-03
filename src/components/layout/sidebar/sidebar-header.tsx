@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils/cn";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
 
 interface SidebarHeaderProps {
   isOpen: boolean;
@@ -38,16 +39,22 @@ export function SidebarHeader({ isOpen, onToggle }: SidebarHeaderProps) {
         )}
       </button>
       
-      {/* Logo */}
+      {/* Logo - Clickable to navigate to dashboard */}
       <div className="relative flex items-center justify-center w-full">
         {isOpen ? (
-          <h2 className="text-lg font-bold text-foreground transition-all duration-300 ease-in-out opacity-100">
+          <Link 
+            href="/dashboard"
+            className="text-lg font-bold text-foreground transition-all duration-300 ease-in-out opacity-100 hover:text-primary cursor-pointer"
+          >
             SS ERP
-          </h2>
+          </Link>
         ) : (
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-all duration-300 ease-in-out hover:bg-primary/90 opacity-100">
+          <Link
+            href="/dashboard"
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-all duration-300 ease-in-out hover:bg-primary/90 opacity-100 cursor-pointer"
+          >
             <span className="text-xs font-bold">SS</span>
-          </div>
+          </Link>
         )}
       </div>
     </div>
