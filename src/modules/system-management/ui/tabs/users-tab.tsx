@@ -122,10 +122,10 @@ export function UsersTab({ onSelectUser }: UsersTabProps = {}) {
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Header Actions */}
-      <div className="flex justify-between items-center gap-4">
-        <div className="flex-1 relative">
+      <div className="flex justify-between items-center gap-4 w-full">
+        <div className="flex-1 relative w-full min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search users by email, name..."
@@ -134,13 +134,13 @@ export function UsersTab({ onSelectUser }: UsersTabProps = {}) {
               setSearchQuery(e.target.value);
               setPage(1);
             }}
-            className="pl-10"
+            className="pl-10 w-full"
           />
         </div>
       </div>
 
       {/* Users Table */}
-      <Card>
+      <Card className="w-full">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">
             Users ({usersData?.total || 0})
@@ -151,7 +151,56 @@ export function UsersTab({ onSelectUser }: UsersTabProps = {}) {
             <div className="text-center py-12 text-muted-foreground">Loading users...</div>
           ) : usersData?.data && usersData.data.length > 0 ? (
             <>
-              <div className="overflow-x-auto">
+              {/* Mobile: Card view, Desktop: Table view */}
+              <div className="block md:hidden space-y-3">
+                {usersData.data.map((user) => (
+                  <Card key={user.id} className="cursor-pointer hover:bg-accent/50" onClick={() => {
+                    setSelectedUserId(user.id);
+                    onSelectUser?.(user.id);
+                  }}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium flex-shrink-0">
+                            {user.firstName?.[0] || user.lastName?.[0] || user.email[0].toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">
+                              {user.firstName || user.lastName
+                                ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+                                : "No Name"}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {user.roles && user.roles.length > 0 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {user.roles[0]}
+                                </Badge>
+                              )}
+                              <Badge variant={user.isActive ? "default" : "secondary"} className="text-xs">
+                                {user.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        {user.email.toLowerCase() !== '01.mahadi@gmail.com' && (
+                          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(user)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(user.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              
+              {/* Desktop: Table view */}
+              <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>

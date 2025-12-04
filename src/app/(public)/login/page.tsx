@@ -76,60 +76,60 @@ export default function LoginPage() {
             <CardDescription className="text-center">
               Enter your credentials to access the system
             </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium">{t("auth.email")}</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="email@example.com"
-                  {...register("email")}
-                  disabled={loginMutation.isPending}
+              <Input
+                id="email"
+                type="email"
+                placeholder="email@example.com"
+                {...register("email")}
+                disabled={loginMutation.isPending}
                   className="h-11 transition-shadow focus:shadow-sm"
-                />
+              />
                 {errors.email && (
                   <p className="text-sm text-destructive animate-in fade-in slide-in-from-top-1 duration-200">
                     {errors.email.message}
                   </p>
                 )}
-              </div>
-              <div className="space-y-2">
+            </div>
+            <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-medium">{t("auth.password")}</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    {...register("password")}
-                    disabled={loginMutation.isPending}
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  {...register("password")}
+                  disabled={loginMutation.isPending}
                     className="h-11 pr-10 transition-shadow focus:shadow-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none disabled:opacity-50 transition-colors"
-                    disabled={loginMutation.isPending}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-                {errors.password && (
+                  disabled={loginMutation.isPending}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              {errors.password && (
                   <p className="text-sm text-destructive animate-in fade-in slide-in-from-top-1 duration-200">
                     {errors.password.message}
                   </p>
-                )}
-              </div>
-              {error && (
-                <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive animate-in fade-in slide-in-from-top-2 duration-200">
-                  {error}
-                </div>
               )}
+            </div>
+            {error && (
+                <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive animate-in fade-in slide-in-from-top-2 duration-200">
+                {error}
+              </div>
+            )}
               <Button 
                 type="submit" 
                 className="w-full h-11 font-medium shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
@@ -143,10 +143,10 @@ export default function LoginPage() {
                 ) : (
                   t("auth.login")
                 )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-6">

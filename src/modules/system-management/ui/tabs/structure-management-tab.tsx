@@ -187,19 +187,19 @@ export function StructureManagementTab() {
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
+      <Card className="w-full">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base">System Structure</CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 w-full">
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-base break-words">System Structure</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1 break-words">
                 Create and manage modules, submodules, features, and operations in a hierarchical structure.
               </p>
             </div>
             <Dialog open={creatingItem?.type === "module"} onOpenChange={(open) => !open && setCreatingItem(null)}>
               <DialogTrigger asChild>
-                <Button onClick={() => setCreatingItem({ type: "module" })}>
+                <Button onClick={() => setCreatingItem({ type: "module" })} className="w-full sm:w-auto flex-shrink-0">
                   <Plus className="h-4 w-4 mr-2" />
                   New Module
                 </Button>
@@ -208,12 +208,31 @@ export function StructureManagementTab() {
                 <CreateModuleForm
                   onSuccess={() => {
                     setCreatingItem(null);
-                    toast.success("Module created successfully");
                   }}
                   onCancel={() => setCreatingItem(null)}
                 />
               </DialogContent>
             </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {treeModules.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <FolderTree className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No structure defined. Create your first module to get started.</p>
+            </div>
+          ) : (
+            <div className="max-h-[calc(100vh-20rem)] overflow-y-auto overflow-x-hidden w-full">
+              <StructureTree
+                modules={treeModules}
+                onEdit={(type, id, parentId) => setEditingItem({ type, id, parentId })}
+                onDelete={(type, id) => setDeletingItem({ type, id })}
+                onCreate={(type, parentId) => setCreatingItem({ type, parentId })}
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Create Dialogs */}
       {creatingItem?.type === "submodule" && (
@@ -223,7 +242,6 @@ export function StructureManagementTab() {
               moduleId={creatingItem.parentId!}
               onSuccess={() => {
                 setCreatingItem(null);
-                toast.success("Submodule created successfully");
               }}
               onCancel={() => setCreatingItem(null)}
             />
@@ -238,7 +256,6 @@ export function StructureManagementTab() {
               submoduleId={creatingItem.parentId!}
               onSuccess={() => {
                 setCreatingItem(null);
-                toast.success("Feature created successfully");
               }}
               onCancel={() => setCreatingItem(null)}
             />
@@ -253,33 +270,12 @@ export function StructureManagementTab() {
               featureId={creatingItem.parentId!}
               onSuccess={() => {
                 setCreatingItem(null);
-                toast.success("Operation created successfully");
               }}
               onCancel={() => setCreatingItem(null)}
             />
           </DialogContent>
         </Dialog>
       )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {treeModules.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <FolderTree className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No structure defined. Create your first module to get started.</p>
-            </div>
-          ) : (
-            <div className="max-h-[calc(100vh-20rem)] overflow-y-auto">
-              <StructureTree
-                modules={treeModules}
-                onEdit={(type, id, parentId) => setEditingItem({ type, id, parentId })}
-                onDelete={(type, id) => setDeletingItem({ type, id })}
-                onCreate={(type, parentId) => setCreatingItem({ type, parentId })}
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Edit Dialogs */}
       {editingItem && (
@@ -332,6 +328,8 @@ export function StructureManagementTab() {
 function CreateModuleForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
   const createModule = useCreateModule();
   const toast = useToast();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const isSubmittingRef = React.useRef(false);
   const {
     register,
     handleSubmit,
@@ -341,18 +339,73 @@ function CreateModuleForm({ onSuccess, onCancel }: { onSuccess: () => void; onCa
     resolver: zodResolver(moduleSchema),
   });
 
-  const onSubmit = async (data: ModuleFormData) => {
+  const onSubmit = React.useCallback(async (data: ModuleFormData, e?: React.BaseSyntheticEvent) => {
+    // Prevent default form submission and multiple submissions
+    e?.preventDefault();
+    e?.stopPropagation();
+    
+    // Use ref to prevent race conditions
+    if (isSubmittingRef.current || isSubmitting || createModule.isPending) {
+      return;
+    }
+
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
     try {
       await createModule.mutateAsync(data);
       toast.success("Module created successfully");
       onSuccess();
     } catch (error: any) {
-      toast.error(error?.message || "Failed to create module");
+      // Extract error message from various error formats
+      let errorMessage = "Failed to create module";
+      
+      // Log error for debugging
+      console.error("Module creation error:", error);
+      console.error("Error type:", typeof error);
+      console.error("Error instanceof Error:", error instanceof Error);
+      console.error("Error message:", error?.message);
+      console.error("Error details:", error?.details);
+      
+      if (error) {
+        // Handle ApiError object (from api-client.ts) - Error instance with ApiError properties
+        // The api-client throws: Object.assign(new Error(errorMessage), { message, statusCode, error, details })
+        if (error.message) {
+          errorMessage = error.message;
+        }
+        // Handle error with details
+        else if (error.details?.message) {
+          errorMessage = error.details.message;
+        }
+        // Handle axios-style error
+        else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+        // Handle string error
+        else if (typeof error === "string") {
+          errorMessage = error;
+        }
+        // Handle Error instance
+        else if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+      }
+      
+      // Show error toast
+      toast.error(errorMessage);
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
-  };
+  }, [isSubmitting, createModule, toast, onSuccess]);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form 
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSubmit(onSubmit)(e);
+      }} 
+      className="space-y-4"
+    >
       <DialogHeader>
         <DialogTitle>Create Module</DialogTitle>
       </DialogHeader>
@@ -385,8 +438,8 @@ function CreateModuleForm({ onSuccess, onCancel }: { onSuccess: () => void; onCa
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={createModule.isPending}>
-          {createModule.isPending ? "Creating..." : "Create"}
+        <Button type="submit" disabled={isSubmitting || createModule.isPending}>
+          {isSubmitting || createModule.isPending ? "Creating..." : "Create"}
         </Button>
       </div>
     </form>
@@ -452,38 +505,38 @@ function StructureTree({
   };
 
   return (
-    <div className="space-y-1 border rounded-lg p-4 bg-card shadow-sm">
+    <div className="space-y-1 border rounded-lg p-3 sm:p-4 bg-card shadow-sm w-full overflow-x-hidden">
       {modules.map((module) => {
         const isExpanded = expandedModules.has(module.id);
         return (
-          <div key={module.id} className="space-y-1">
-            <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-accent/50 transition-all duration-150 group">
-              <div className="flex items-center gap-2.5 flex-1">
+          <div key={module.id} className="space-y-1 w-full">
+            <div className="flex items-center justify-between py-2 px-2 sm:px-3 rounded-lg hover:bg-accent/50 transition-all duration-150 group w-full min-w-0">
+              <div className="flex items-center gap-2 sm:gap-2.5 flex-1 min-w-0">
                 {module.submodules.length > 0 ? (
                   <button
                     onClick={() => toggleModule(module.id)}
-                    className="flex items-center justify-center w-6 h-6 hover:bg-accent rounded-md transition-colors"
+                    className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 hover:bg-accent rounded-md transition-colors flex-shrink-0"
                   >
                     {isExpanded ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                     )}
                   </button>
                 ) : (
-                  <div className="w-6" />
+                  <div className="w-5 sm:w-6 flex-shrink-0" />
                 )}
-                <div className="flex items-center gap-2.5 flex-1">
-                  {module.icon && <IconDisplay icon={module.icon} size={20} className="flex-shrink-0" />}
-                  <span className="font-semibold text-base">{module.name}</span>
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Module</span>
+                <div className="flex items-center gap-1.5 sm:gap-2.5 flex-1 min-w-0 overflow-hidden">
+                  {module.icon && <IconDisplay icon={module.icon} size={18} className="flex-shrink-0 hidden sm:block" />}
+                  <span className="font-semibold text-sm sm:text-base truncate">{module.name}</span>
+                  <span className="text-xs bg-primary/10 text-primary px-1.5 sm:px-2 py-0.5 rounded-full font-medium flex-shrink-0 hidden sm:inline">Module</span>
                   {module.description && (
-                    <span className="text-xs text-muted-foreground font-normal">({module.description})</span>
+                    <span className="text-xs text-muted-foreground font-normal truncate hidden md:inline">({module.description})</span>
                   )}
-                  <span className="text-xs text-muted-foreground font-mono">• {module.slug}</span>
+                  <span className="text-xs text-muted-foreground font-mono truncate hidden lg:inline">• {module.slug}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 sm:gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
                 {module.slug !== 'system-management' && (
                   <>
                     <Button
@@ -516,38 +569,38 @@ function StructureTree({
               </div>
             </div>
             {isExpanded && (
-              <div className="ml-8 space-y-1 mt-1 border-l-2 border-border/50 pl-4">
+              <div className="ml-4 sm:ml-8 space-y-1 mt-1 border-l-2 border-border/50 pl-2 sm:pl-4 w-full">
                 {module.submodules.map((submodule: any) => {
                   const isSubExpanded = expandedSubmodules.has(submodule.id);
                   return (
-                    <div key={submodule.id} className="space-y-1">
-                      <div className="flex items-center justify-between py-1.5 px-3 rounded-lg hover:bg-accent/40 transition-all duration-150 group">
-                        <div className="flex items-center gap-2.5 flex-1">
+                    <div key={submodule.id} className="space-y-1 w-full">
+                      <div className="flex items-center justify-between py-1.5 px-2 sm:px-3 rounded-lg hover:bg-accent/40 transition-all duration-150 group w-full min-w-0">
+                        <div className="flex items-center gap-1.5 sm:gap-2.5 flex-1 min-w-0">
                           {submodule.features.length > 0 ? (
                             <button
                               onClick={() => toggleSubmodule(submodule.id)}
-                              className="flex items-center justify-center w-6 h-6 hover:bg-accent rounded-md transition-colors"
+                              className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 hover:bg-accent rounded-md transition-colors flex-shrink-0"
                             >
                               {isSubExpanded ? (
-                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                               ) : (
-                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                               )}
                             </button>
                           ) : (
-                            <div className="w-6" />
+                            <div className="w-5 sm:w-6 flex-shrink-0" />
                           )}
-                          <div className="flex items-center gap-2.5 flex-1">
-                            {submodule.icon && <IconDisplay icon={submodule.icon} size={18} className="flex-shrink-0" />}
-                            <span className="font-medium text-sm">{submodule.name}</span>
-                            <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full font-medium">Submodule</span>
+                          <div className="flex items-center gap-1.5 sm:gap-2.5 flex-1 min-w-0 overflow-hidden">
+                            {submodule.icon && <IconDisplay icon={submodule.icon} size={16} className="flex-shrink-0 hidden sm:block" />}
+                            <span className="font-medium text-xs sm:text-sm truncate">{submodule.name}</span>
+                            <span className="text-xs bg-secondary text-secondary-foreground px-1.5 sm:px-2 py-0.5 rounded-full font-medium flex-shrink-0 hidden sm:inline">Submodule</span>
                             {submodule.description && (
-                              <span className="text-xs text-muted-foreground font-normal">({submodule.description})</span>
+                              <span className="text-xs text-muted-foreground font-normal truncate hidden md:inline">({submodule.description})</span>
                             )}
-                            <span className="text-xs text-muted-foreground font-mono">• {submodule.slug}</span>
+                            <span className="text-xs text-muted-foreground font-mono truncate hidden lg:inline">• {submodule.slug}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1 sm:gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -576,38 +629,38 @@ function StructureTree({
                         </div>
                       </div>
                       {isSubExpanded && (
-                        <div className="ml-8 space-y-1 mt-1 border-l-2 border-border/50 pl-4">
+                        <div className="ml-4 sm:ml-8 space-y-1 mt-1 border-l-2 border-border/50 pl-2 sm:pl-4 w-full">
                           {submodule.features.map((feature: any) => {
                             const isFeatExpanded = expandedFeatures.has(feature.id);
                             return (
-                              <div key={feature.id} className="space-y-1">
-                                <div className="flex items-center justify-between py-1.5 px-3 rounded-lg hover:bg-accent/30 transition-all duration-150 group">
-                                  <div className="flex items-center gap-2.5 flex-1">
+                              <div key={feature.id} className="space-y-1 w-full">
+                                <div className="flex items-center justify-between py-1.5 px-2 sm:px-3 rounded-lg hover:bg-accent/30 transition-all duration-150 group w-full min-w-0">
+                                  <div className="flex items-center gap-1.5 sm:gap-2.5 flex-1 min-w-0">
                                     {feature.operations.length > 0 ? (
                                       <button
                                         onClick={() => toggleFeature(feature.id)}
-                                        className="flex items-center justify-center w-6 h-6 hover:bg-accent rounded-md transition-colors"
+                                        className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 hover:bg-accent rounded-md transition-colors flex-shrink-0"
                                       >
                                         {isFeatExpanded ? (
-                                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                          <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                                         ) : (
-                                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                          <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                                         )}
                                       </button>
                                     ) : (
-                                      <div className="w-6" />
+                                      <div className="w-5 sm:w-6 flex-shrink-0" />
                                     )}
-                                    <div className="flex items-center gap-2.5 flex-1">
-                                      {feature.icon && <IconDisplay icon={feature.icon} size={16} className="flex-shrink-0" />}
-                                      <span className="text-sm font-medium">{feature.name}</span>
-                                      <span className="text-xs bg-accent text-accent-foreground px-2 py-0.5 rounded-full font-medium">Feature</span>
+                                    <div className="flex items-center gap-1.5 sm:gap-2.5 flex-1 min-w-0 overflow-hidden">
+                                      {feature.icon && <IconDisplay icon={feature.icon} size={14} className="flex-shrink-0 hidden sm:block" />}
+                                      <span className="text-xs sm:text-sm font-medium truncate">{feature.name}</span>
+                                      <span className="text-xs bg-accent text-accent-foreground px-1.5 sm:px-2 py-0.5 rounded-full font-medium flex-shrink-0 hidden sm:inline">Feature</span>
                                       {feature.description && (
-                                        <span className="text-xs text-muted-foreground font-normal">({feature.description})</span>
+                                        <span className="text-xs text-muted-foreground font-normal truncate hidden md:inline">({feature.description})</span>
                                       )}
-                                      <span className="text-xs text-muted-foreground font-mono">• {feature.slug}</span>
+                                      <span className="text-xs text-muted-foreground font-mono truncate hidden lg:inline">• {feature.slug}</span>
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <div className="flex items-center gap-1 sm:gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
                                     <Button
                                       variant="ghost"
                                       size="sm"
@@ -636,32 +689,32 @@ function StructureTree({
                                   </div>
                                 </div>
                                 {isFeatExpanded && (
-                                  <div className="ml-8 space-y-1 mt-1 border-l-2 border-border/50 pl-4">
+                                  <div className="ml-4 sm:ml-8 space-y-1 mt-1 border-l-2 border-border/50 pl-2 sm:pl-4 w-full">
                                     {feature.operations.map((operation: any) => (
                                       <div
                                         key={operation.id}
-                                        className="flex items-center justify-between py-1.5 px-3 rounded-lg hover:bg-accent/30 transition-all duration-150 group"
+                                        className="flex items-center justify-between py-1.5 px-2 sm:px-3 rounded-lg hover:bg-accent/30 transition-all duration-150 group w-full min-w-0"
                                       >
-                                        <div className="flex items-center gap-2.5 flex-1">
+                                        <div className="flex items-center gap-1.5 sm:gap-2.5 flex-1 min-w-0">
                                           {/* Dot indicator for operations */}
-                                          <div className="w-6 flex items-center justify-center flex-shrink-0">
-                                            <div className="h-2 w-2 rounded-full bg-muted-foreground/30" />
+                                          <div className="w-5 sm:w-6 flex items-center justify-center flex-shrink-0">
+                                            <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-muted-foreground/30" />
                                           </div>
-                                          <div className="flex items-center gap-2.5 flex-1">
-                                            <span className="text-sm font-medium">{operation.name}</span>
-                                            <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-medium">Operation</span>
+                                          <div className="flex items-center gap-1.5 sm:gap-2.5 flex-1 min-w-0 overflow-hidden">
+                                            <span className="text-xs sm:text-sm font-medium truncate">{operation.name}</span>
+                                            <span className="text-xs bg-muted text-muted-foreground px-1.5 sm:px-2 py-0.5 rounded-full font-medium flex-shrink-0 hidden sm:inline">Operation</span>
                                             {operation.isDefault && (
-                                              <span className="text-xs bg-success/10 text-success px-2 py-0.5 rounded-full font-medium">
+                                              <span className="text-xs bg-success/10 text-success px-1.5 sm:px-2 py-0.5 rounded-full font-medium flex-shrink-0 hidden sm:inline">
                                                 Default
                                               </span>
                                             )}
                                             {operation.description && (
-                                              <span className="text-xs text-muted-foreground font-normal">({operation.description})</span>
+                                              <span className="text-xs text-muted-foreground font-normal truncate hidden md:inline">({operation.description})</span>
                                             )}
-                                            <span className="text-xs text-muted-foreground font-mono">• {operation.slug}</span>
+                                            <span className="text-xs text-muted-foreground font-mono truncate hidden lg:inline">• {operation.slug}</span>
                                           </div>
                                         </div>
-                                        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center gap-1 sm:gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
                                           <Button
                                             variant="ghost"
                                             size="sm"
@@ -1015,6 +1068,7 @@ function CreateSubmoduleForm({
 }) {
   const createSubmodule = useCreateSubmodule();
   const toast = useToast();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const {
     register,
     handleSubmit,
@@ -1027,18 +1081,54 @@ function CreateSubmoduleForm({
     },
   });
 
-  const onSubmit = async (data: SubmoduleFormData) => {
+  const onSubmit = React.useCallback(async (data: SubmoduleFormData, e?: React.BaseSyntheticEvent) => {
+    // Prevent default form submission and multiple submissions
+    e?.preventDefault();
+    e?.stopPropagation();
+    
+    if (isSubmitting || createSubmodule.isPending) {
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       await createSubmodule.mutateAsync(data);
       toast.success("Submodule created successfully");
       onSuccess();
     } catch (error: any) {
-      toast.error(error?.message || "Failed to create submodule");
+      // Extract error message from various error formats
+      let errorMessage = "Failed to create submodule";
+      
+      console.error("Submodule creation error:", error);
+      
+      if (error) {
+        if (error.message) {
+          errorMessage = error.message;
+        } else if (error.details?.message) {
+          errorMessage = error.details.message;
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (typeof error === "string") {
+          errorMessage = error;
+        } else if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
-  };
+  }, [isSubmitting, createSubmodule, toast, onSuccess]);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form 
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSubmit(onSubmit)(e);
+      }} 
+      className="space-y-4"
+    >
       <DialogHeader>
         <DialogTitle>Create Submodule</DialogTitle>
       </DialogHeader>
@@ -1071,8 +1161,8 @@ function CreateSubmoduleForm({
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={createSubmodule.isPending}>
-          {createSubmodule.isPending ? "Creating..." : "Create"}
+        <Button type="submit" disabled={isSubmitting || createSubmodule.isPending}>
+          {isSubmitting || createSubmodule.isPending ? "Creating..." : "Create"}
         </Button>
       </div>
     </form>
@@ -1090,6 +1180,7 @@ function CreateFeatureForm({
 }) {
   const createFeature = useCreateFeature();
   const toast = useToast();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const {
     register,
     handleSubmit,
@@ -1102,18 +1193,54 @@ function CreateFeatureForm({
     },
   });
 
-  const onSubmit = async (data: FeatureFormData) => {
+  const onSubmit = React.useCallback(async (data: FeatureFormData, e?: React.BaseSyntheticEvent) => {
+    // Prevent default form submission and multiple submissions
+    e?.preventDefault();
+    e?.stopPropagation();
+    
+    if (isSubmitting || createFeature.isPending) {
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       await createFeature.mutateAsync(data);
       toast.success("Feature created successfully");
       onSuccess();
     } catch (error: any) {
-      toast.error(error?.message || "Failed to create feature");
+      // Extract error message from various error formats
+      let errorMessage = "Failed to create feature";
+      
+      console.error("Feature creation error:", error);
+      
+      if (error) {
+        if (error.message) {
+          errorMessage = error.message;
+        } else if (error.details?.message) {
+          errorMessage = error.details.message;
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (typeof error === "string") {
+          errorMessage = error;
+        } else if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
-  };
+  }, [isSubmitting, createFeature, toast, onSuccess]);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form 
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSubmit(onSubmit)(e);
+      }} 
+      className="space-y-4"
+    >
       <DialogHeader>
         <DialogTitle>Create Feature</DialogTitle>
       </DialogHeader>
@@ -1150,8 +1277,8 @@ function CreateFeatureForm({
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={createFeature.isPending}>
-          {createFeature.isPending ? "Creating..." : "Create"}
+        <Button type="submit" disabled={isSubmitting || createFeature.isPending}>
+          {isSubmitting || createFeature.isPending ? "Creating..." : "Create"}
         </Button>
       </div>
     </form>
@@ -1170,6 +1297,7 @@ function CreateOperationForm({
   const createOperation = useCreateOperation();
   const addOperationToFeature = useAddOperationToFeature();
   const toast = useToast();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const {
     register,
     handleSubmit,
@@ -1178,7 +1306,16 @@ function CreateOperationForm({
     resolver: zodResolver(operationSchema),
   });
 
-  const onSubmit = async (data: OperationFormData) => {
+  const onSubmit = React.useCallback(async (data: OperationFormData, e?: React.BaseSyntheticEvent) => {
+    // Prevent default form submission and multiple submissions
+    e?.preventDefault();
+    e?.stopPropagation();
+    
+    if (isSubmitting || createOperation.isPending || addOperationToFeature.isPending) {
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       // First create the operation
       const operation = await createOperation.mutateAsync(data);
@@ -1191,12 +1328,39 @@ function CreateOperationForm({
       toast.success("Operation created and linked to feature successfully");
       onSuccess();
     } catch (error: any) {
-      toast.error(error?.message || "Failed to create operation");
+      // Extract error message from various error formats
+      let errorMessage = "Failed to create operation";
+      
+      console.error("Operation creation error:", error);
+      
+      if (error) {
+        if (error.message) {
+          errorMessage = error.message;
+        } else if (error.details?.message) {
+          errorMessage = error.details.message;
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (typeof error === "string") {
+          errorMessage = error;
+        } else if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
-  };
+  }, [isSubmitting, createOperation, addOperationToFeature, featureId, toast, onSuccess]);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form 
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSubmit(onSubmit)(e);
+      }} 
+      className="space-y-4"
+    >
       <DialogHeader>
         <DialogTitle>Create Operation</DialogTitle>
       </DialogHeader>
@@ -1215,7 +1379,7 @@ function CreateOperationForm({
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={createOperation.isPending || addOperationToFeature.isPending}>
+        <Button type="submit" disabled={isSubmitting || createOperation.isPending || addOperationToFeature.isPending}>
           {createOperation.isPending || addOperationToFeature.isPending ? "Creating..." : "Create"}
         </Button>
       </div>

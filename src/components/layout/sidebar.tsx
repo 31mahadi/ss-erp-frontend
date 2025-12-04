@@ -344,8 +344,10 @@ export function Sidebar({ className }: SidebarProps) {
       className={cn(
         "fixed left-0 top-0 z-40 h-screen border-r border-border/60 flex flex-col",
         "bg-muted/30 backdrop-blur-sm",
-        "transition-[width] duration-300 ease-smooth",
-        isOpen ? "w-64" : "w-16",
+        "transition-all duration-300 ease-smooth",
+        // Mobile: overlay sidebar, tablet+: fixed sidebar
+        "lg:translate-x-0",
+        isOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0 lg:w-16",
         !isOpen && "overflow-visible",
         className
       )}
@@ -364,7 +366,7 @@ export function Sidebar({ className }: SidebarProps) {
           <div 
             ref={scrollContainerRef}
             className={cn(
-              "h-full",
+            "h-full",
               isOpen ? "overflow-y-auto overflow-x-hidden scrollbar-hide" : "overflow-visible"
             )}
           >

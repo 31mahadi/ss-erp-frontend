@@ -123,6 +123,11 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: hidden;
+  }
+  
+  html {
+    overflow-x: hidden;
   }
   
   /* Improved focus states */
@@ -741,6 +746,177 @@
     opacity: 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Toast Design - Matches Card Component Styling */
+  [data-sonner-toast],
+  .sonner-toast {
+    background: hsl(var(--card)) !important;
+    color: hsl(var(--card-foreground)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    box-shadow: var(--shadow-sm) !important;
+    border-radius: var(--radius) !important;
+    padding: 1rem !important;
+    min-width: 300px !important;
+    max-width: 400px !important;
+    position: relative !important;
+    overflow: hidden !important;
+    margin-bottom: 0.5rem !important; /* Spacing between multiple toasts */
+  }
+  
+  /* Toast Container - Proper stacking */
+  [data-sonner-toaster] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  /* Ensure toasts don't overlap */
+  [data-sonner-toast]:not(:last-child) {
+    margin-bottom: 0.5rem !important;
+  }
+  
+  /* Toast Text - Matches Card Typography */
+  [data-sonner-toast] [data-title],
+  .sonner-toast [data-title] {
+    color: hsl(var(--card-foreground)) !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem !important;
+    line-height: 1.4 !important;
+    margin-bottom: 0 !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  [data-sonner-toast] [data-description],
+  .sonner-toast [data-description] {
+    color: hsl(var(--muted-foreground)) !important;
+    font-weight: 400 !important;
+    font-size: 0.8125rem !important;
+    line-height: 1.5 !important;
+    margin-top: 0.25rem !important;
+    margin-bottom: 0 !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Hide Close Button */
+  [data-sonner-toast] [data-close-button],
+  .sonner-toast [data-close-button] {
+    display: none !important;
+  }
+  
+  /* Duration Bar Removed */
+  
+  /* Success Toast - Left Border */
+  [data-sonner-toast][data-type="success"],
+  .sonner-toast[data-type="success"] {
+    background: hsl(var(--card)) !important;
+    border-left: 3px solid hsl(var(--success)) !important;
+  }
+  
+  [data-sonner-toast][data-type="success"] [data-title],
+  .sonner-toast[data-type="success"] [data-title] {
+    color: hsl(var(--card-foreground)) !important;
+  }
+  
+  [data-sonner-toast][data-type="success"] svg,
+  .sonner-toast[data-type="success"] svg {
+    color: hsl(var(--success)) !important;
+  }
+  
+  /* Error Toast - Left Border */
+  [data-sonner-toast][data-type="error"],
+  .sonner-toast[data-type="error"] {
+    background: hsl(var(--card)) !important;
+    border-left: 3px solid hsl(var(--destructive)) !important;
+  }
+  
+  [data-sonner-toast][data-type="error"] [data-title],
+  .sonner-toast[data-type="error"] [data-title] {
+    color: hsl(var(--card-foreground)) !important;
+  }
+  
+  [data-sonner-toast][data-type="error"] svg,
+  .sonner-toast[data-type="error"] svg {
+    color: hsl(var(--destructive)) !important;
+  }
+  
+  /* Warning Toast - Left Border */
+  [data-sonner-toast][data-type="warning"],
+  .sonner-toast[data-type="warning"] {
+    background: hsl(var(--card)) !important;
+    border-left: 3px solid hsl(var(--warning)) !important;
+  }
+  
+  [data-sonner-toast][data-type="warning"] [data-title],
+  .sonner-toast[data-type="warning"] [data-title] {
+    color: hsl(var(--card-foreground)) !important;
+  }
+  
+  [data-sonner-toast][data-type="warning"] svg,
+  .sonner-toast[data-type="warning"] svg {
+    color: hsl(var(--warning)) !important;
+  }
+  
+  /* Info Toast - Left Border */
+  [data-sonner-toast][data-type="info"],
+  .sonner-toast[data-type="info"] {
+    background: hsl(var(--card)) !important;
+    border-left: 3px solid hsl(var(--primary)) !important;
+  }
+  
+  [data-sonner-toast][data-type="info"] [data-title],
+  .sonner-toast[data-type="info"] [data-title] {
+    color: hsl(var(--card-foreground)) !important;
+  }
+  
+  [data-sonner-toast][data-type="info"] svg,
+  .sonner-toast[data-type="info"] svg {
+    color: hsl(var(--primary)) !important;
+  }
+  
+  /* Dark Mode - Same Styling with Visible Borders */
+  .dark [data-sonner-toast],
+  .dark .sonner-toast {
+    background: hsl(var(--card)) !important;
+    color: hsl(var(--card-foreground)) !important;
+    border-color: hsl(var(--border)) !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+  
+  .dark [data-sonner-toast] [data-title],
+  .dark .sonner-toast [data-title] {
+    color: hsl(var(--card-foreground)) !important;
+  }
+  
+  .dark [data-sonner-toast] [data-description],
+  .dark .sonner-toast [data-description] {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+  
+  /* Dark Mode Success - Ensure Left Border is Visible */
+  .dark [data-sonner-toast][data-type="success"],
+  .dark .sonner-toast[data-type="success"] {
+    border-left: 3px solid hsl(var(--success)) !important;
+  }
+  
+  /* Dark Mode Error - Ensure Left Border is Visible */
+  .dark [data-sonner-toast][data-type="error"],
+  .dark .sonner-toast[data-type="error"] {
+    border-left: 3px solid hsl(var(--destructive)) !important;
+  }
+  
+  /* Dark Mode Warning - Ensure Left Border is Visible */
+  .dark [data-sonner-toast][data-type="warning"],
+  .dark .sonner-toast[data-type="warning"] {
+    border-left: 3px solid hsl(var(--warning)) !important;
+  }
+  
+  /* Dark Mode Info - Ensure Left Border is Visible */
+  .dark [data-sonner-toast][data-type="info"],
+  .dark .sonner-toast[data-type="info"] {
+    border-left: 3px solid hsl(var(--primary)) !important;
   }
   
   /* Improve card description text - White and sharp */

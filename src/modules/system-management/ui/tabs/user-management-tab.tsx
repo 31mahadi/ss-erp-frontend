@@ -83,19 +83,19 @@ export function UserManagementTab() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
+      <Card className="w-full">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base">User Management</CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 w-full">
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-base break-words">User Management</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1 break-words">
                 Manage users, assign roles, and configure explicit permissions (including denials)
               </p>
             </div>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button onClick={() => reset()}>
+                <Button onClick={() => reset()} className="w-full sm:w-auto flex-shrink-0">
                   <Plus className="h-4 w-4 mr-2" />
                   New User
                 </Button>

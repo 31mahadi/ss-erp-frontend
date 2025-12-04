@@ -48,9 +48,9 @@ export function RoleManagementTab() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base">Role Management</CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-base break-words">Role Management</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1 break-words">
                 Create and manage roles, then assign permissions to each role
               </p>
             </div>

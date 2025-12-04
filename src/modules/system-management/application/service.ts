@@ -28,9 +28,22 @@ export class SystemManagementService {
   }
 
   async createModule(data: { name: string; slug: string; description?: string; icon?: string; order?: number }): Promise<Module> {
-    const response = await apiClient.post<Module>(API_ENDPOINTS.admin.modules.create, data);
-    if (!response.data) throw new Error("Failed to create module");
-    return response.data;
+    try {
+      const response = await apiClient.post<Module>(API_ENDPOINTS.admin.modules.create, data);
+      if (!response.data) {
+        // If response has a message, use it; otherwise use default
+        const errorMessage = response.message || "Failed to create module";
+        const error: any = new Error(errorMessage);
+        error.statusCode = response.statusCode;
+        error.details = response;
+        throw error;
+      }
+      return response.data;
+    } catch (error: any) {
+      // Re-throw the error as-is - it's already an Error instance with message from api-client
+      // The api-client throws Error instances with ApiError properties attached
+      throw error;
+    }
   }
 
   async updateModule(id: string, data: Partial<Module>): Promise<Module> {

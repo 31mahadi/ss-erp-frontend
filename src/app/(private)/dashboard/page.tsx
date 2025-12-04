@@ -75,7 +75,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 stagger-children">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 stagger-children">
           {quickStats.map((stat, index) => (
             <Card key={index} className="card-hover overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between pb-2">

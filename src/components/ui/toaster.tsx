@@ -1,24 +1,29 @@
 "use client";
 
-let SonnerToaster: any = null;
-
-try {
-  SonnerToaster = require("sonner").Toaster;
-} catch {
-  // Sonner not available
-}
+import { Toaster as SonnerToaster } from "sonner";
+import { useTheme } from "@/lib/theme/theme-provider";
 
 export function Toaster() {
-  if (!SonnerToaster) {
-    return null; // Don't render if sonner is not available
-  }
+  const { resolvedTheme } = useTheme();
   
   return (
     <SonnerToaster
       position="top-right"
-      richColors
-      closeButton
-      duration={3000}
+      theme={resolvedTheme}
+      closeButton={false}
+      duration={5000}
+      expand={false}
+      richColors={false}
+      visibleToasts={5}
+      gap={8}
+      toastOptions={{
+        className: "sonner-toast",
+        style: {
+          background: "hsl(var(--card))",
+          color: "hsl(var(--card-foreground))",
+          border: "1px solid hsl(var(--border))",
+        },
+      }}
     />
   );
 }

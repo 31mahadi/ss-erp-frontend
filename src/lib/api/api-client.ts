@@ -468,12 +468,13 @@ class ApiClient {
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          const error: ApiError = {
-            message: data.message || "Request failed",
+          const errorMessage = data.message || "Request failed";
+          const error: ApiError & Error = Object.assign(new Error(errorMessage), {
+            message: errorMessage,
             statusCode: response.status,
             error: data.error,
             details: data,
-          };
+          });
 
           // Don't retry on client errors (4xx) except 401 (which is handled above)
           // Auth endpoints should never retry
@@ -489,7 +490,7 @@ class ApiClient {
           // Retry on server errors (5xx) or network errors
           if (attempt < retry.attempts) {
             await new Promise((resolve) => setTimeout(resolve, retry.delay * (attempt + 1)));
-            lastError = error as unknown as Error;
+            lastError = error;
             continue;
           }
 
