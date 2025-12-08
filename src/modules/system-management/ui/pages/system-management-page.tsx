@@ -7,16 +7,18 @@ import * as React from "react";
 import { StructureManagementTab } from "../tabs/structure-management-tab";
 import { RoleManagementTab } from "../tabs/role-management-tab";
 import { UserManagementTab } from "../tabs/user-management-tab";
+import { ConfigManagementTab } from "../tabs/config-management-tab";
 import { 
   FolderTree, 
   Shield, 
   UserCog,
-  Settings
+  Settings,
+  Cog
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useUrlState } from "@/lib/hooks";
 
-type Section = "structure" | "roles" | "users";
+type Section = "structure" | "roles" | "users" | "config";
 
 interface NavItem {
   id: Section;
@@ -44,6 +46,12 @@ const navItems: NavItem[] = [
     icon: <UserCog className="h-5 w-5" />,
     description: "Manage users, roles & explicit permissions",
   },
+  {
+    id: "config",
+    label: "Config",
+    icon: <Cog className="h-5 w-5" />,
+    description: "System configuration & master data",
+  },
 ];
 
 export function SystemManagementPage() {
@@ -58,6 +66,8 @@ export function SystemManagementPage() {
         return <RoleManagementTab />;
       case "users":
         return <UserManagementTab />;
+      case "config":
+        return <ConfigManagementTab />;
       default:
         return <StructureManagementTab />;
     }

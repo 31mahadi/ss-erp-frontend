@@ -30,6 +30,32 @@ export const API_ENDPOINTS = {
     updatePassword: (id: string) => `/users/${id}/password`,
     delete: (id: string) => `/users/${id}`,
   },
+  employees: {
+    list: "/employees",
+    all: "/employees/all",
+    get: (id: string) => `/employees/${id}`,
+    create: "/employees",
+    update: (id: string) => `/employees/${id}`,
+    delete: (id: string) => `/employees/${id}`,
+  },
+  config: {
+    departments: {
+      list: "/config/departments",
+      all: "/config/departments/all",
+      get: (id: string) => `/config/departments/${id}`,
+      create: "/config/departments",
+      update: (id: string) => `/config/departments/${id}`,
+      delete: (id: string) => `/config/departments/${id}`,
+    },
+    positions: {
+      list: "/config/positions",
+      all: "/config/positions/all",
+      get: (id: string) => `/config/positions/${id}`,
+      create: "/config/positions",
+      update: (id: string) => `/config/positions/${id}`,
+      delete: (id: string) => `/config/positions/${id}`,
+    },
+  },
   admin: {
     modules: {
       list: "/admin/modules",
