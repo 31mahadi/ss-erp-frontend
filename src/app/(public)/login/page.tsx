@@ -44,7 +44,14 @@ export default function LoginPage() {
       await loginMutation.mutateAsync({ email: data.email, password: data.password });
       router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      const apiError = err as any;
+      // Extract user-friendly error message
+      const errorMessage = apiError?.message || 
+                          apiError?.response?.data?.message || 
+                          (apiError?.statusCode === 401 ? "Invalid email or password" : 
+                           apiError?.statusCode === 500 ? "Server error. Please try again later." :
+                           "Login failed. Please check your credentials.");
+      setError(errorMessage);
     }
   };
 

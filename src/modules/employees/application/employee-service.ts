@@ -5,8 +5,12 @@ import type { Employee, EmployeeListResponse, CreateEmployeeInput, UpdateEmploye
 type EmployeeDropdownItem = {
   id: string;
   employeeId: string;
+  firstName: string;
+  lastName: string;
   name: string;
   email: string;
+  department?: string;
+  position?: string;
 };
 
 export class EmployeeService {

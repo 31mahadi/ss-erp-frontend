@@ -38,6 +38,18 @@ export const API_ENDPOINTS = {
     update: (id: string) => `/employees/${id}`,
     delete: (id: string) => `/employees/${id}`,
   },
+  attendance: {
+    list: "/attendance",
+    get: (id: string) => `/attendance/${id}`,
+    create: "/attendance",
+    update: (id: string) => `/attendance/${id}`,
+    delete: (id: string) => `/attendance/${id}`,
+    checkIn: "/attendance/check-in",
+    checkOut: (id: string) => `/attendance/${id}/check-out`,
+    reports: "/attendance/reports",
+    lateArrivals: "/attendance/late-arrivals",
+    overtime: "/attendance/overtime",
+  },
   config: {
     departments: {
       list: "/config/departments",

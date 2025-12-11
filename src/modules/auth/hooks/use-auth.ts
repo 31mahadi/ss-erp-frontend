@@ -33,7 +33,16 @@ export function useLogin() {
       logger.info("User logged in successfully", { userId: user.id });
     },
     onError: (error) => {
-      logger.error("Login failed", error as Error);
+      const apiError = error as any;
+      const statusCode = apiError?.statusCode || apiError?.response?.status;
+      const errorMessage = apiError?.message || "Login failed";
+      
+      logger.error("Login failed", error as Error, {
+        statusCode,
+        message: errorMessage,
+        error: apiError?.error,
+        details: apiError?.details,
+      });
     },
   });
 }
